@@ -1,2 +1,2 @@
-# Finan-as
+# DINHEIRINHO
 Aplicativo de organização financeira
