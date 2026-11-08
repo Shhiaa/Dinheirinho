@@ -97,6 +97,7 @@ select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50
 @keyframes fade{from{opacity:0}}@keyframes up{from{transform:translateY(16px);opacity:0}}
 /* toast */
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:10px 12px 10px 16px;display:none;align-items:center;gap:12px;z-index:60;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#toastUndo{height:32px;color:var(--accent)}
 .toast.open{display:flex;animation:up .2s ease-out}
 /* mobile nav */
 .bnav{display:none}
@@ -139,7 +140,7 @@ textarea.inp{height:120px;padding:12px;font-family:ui-monospace,monospace;font-s
 </div>
 <nav class="bnav" id="bnav"></nav>
 <div class="scrim" id="scrim"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
-<div class="toast" id="toast" role="status"><span id="toastMsg"></span><button class="btn ghost" id="toastUndo" style="height:32px;color:var(--accent)">Desfazer</button></div>
+<div class="toast" id="toast" role="status"><span id="toastMsg"></span><button type="button" class="btn ghost" id="toastUndo">Desfazer</button></div>
 
 <script>
 /* ---------- ícones ---------- */
