@@ -26,6 +26,12 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
+      - name: Verificar arquivos obrigatórios
+        run: |
+          for f in index.html; do
+            test -f "$f" || { echo "::error::Arquivo $f não encontrado"; exit 1; }
+          done
+
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
@@ -42,6 +48,56 @@ jobs:
 
       - name: Validar index.html
         run: html-validate index.html
+
+      - name: Garantir que a chave service_role não está no código
+        run: |
+          for t in $(grep -oE 'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' index.html | sort -u); do
+            payload=$(echo "$t" | cut -d. -f2 | tr '_-' '/+')
+            while [ $(( ${#payload} % 4 )) -ne 0 ]; do payload="$payload="; done
+            if echo "$payload" | base64 -d 2>/dev/null | grep -q '"service_role"'; then
+              echo "::error::Chave service_role do Supabase encontrada no index.html!"
+              exit 1
+            fi
+          done
+          echo "Nenhuma chave service_role encontrada."
+
+      - name: Checar sintaxe do JavaScript inline
+        run: |
+          node -e '
+            const html = require("fs").readFileSync("index.html", "utf8");
+            const blocos = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+            blocos.forEach((m, i) => {
+              try { new Function(m[1]); }
+              catch (e) { console.error(`::error::Script #${i + 1}: ${e.message}`); process.exitCode = 1; }
+            });
+            console.log(`${blocos.length} bloco(s) de script verificado(s).`);
+          '
+
+      - name: Verificar tamanho do index.html
+        run: |
+          tamanho=$(stat -c%s index.html)
+          limite=$((500 * 1024))
+          echo "index.html: $((tamanho / 1024)) KB"
+          [ "$tamanho" -le "$limite" ] || { echo "::error::index.html passou de 500 KB"; exit 1; }
+
+      - name: Procurar restos de debug
+        run: |
+          if grep -nE '\bdebugger\b|console\.log\(|TODO|FIXME' index.html > /tmp/debug.txt; then
+            sed 's/^/::warning file=index.html::/' /tmp/debug.txt
+          else
+            echo "Nada encontrado."
+          fi
+
+      - name: Verificar links quebrados
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress --exclude-loopback
+            --exclude 'supabase\.co'
+            --exclude '^https://fonts\.googleapis\.com/?$'
+            --exclude '^https://fonts\.gstatic\.com/?$'
+            index.html
+          fail: true
 
   # ---------------------------------------------------------------
   # JOB 2: Deploy - só roda em push na main e se o CI passar
