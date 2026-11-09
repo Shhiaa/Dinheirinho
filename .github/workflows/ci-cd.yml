@@ -1,0 +1,78 @@
+name: CI/CD - Dinheirinho
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------
+  # JOB 1: CI - valida o index.html
+  # ---------------------------------------------------------------
+  ci:
+    name: Validar HTML
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar ferramentas de validação
+        run: npm install --global html-validate@9
+
+      - name: Criar configuração do html-validate (se não existir)
+        run: |
+          if [ ! -f .htmlvalidate.json ]; then
+            echo '{ "extends": ["html-validate:recommended"] }' > .htmlvalidate.json
+          fi
+
+      - name: Validar index.html
+        run: html-validate index.html
+
+  # ---------------------------------------------------------------
+  # JOB 2: Deploy - só roda em push na main e se o CI passar
+  # ---------------------------------------------------------------
+  deploy:
+    name: Deploy no GitHub Pages
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Empacotar site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
