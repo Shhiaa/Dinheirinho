@@ -25,6 +25,8 @@ document.addEventListener('click',e=>{
   else if(d.editM)metaForm(S.metas.find(x=>x.id===d.editM));
   else if(d.delM){const x=S.metas.find(y=>y.id===d.delM);confirmar(`Excluir a meta “${esc(x.nome)}” e todo o histórico dela?`,()=>{const prev=JSON.stringify(S);S.metas=S.metas.filter(y=>y.id!==x.id);save();render();toast('Meta excluída',prev)})}
   else if(d.mes){mes=addM(mes,+d.mes);render()}
+  else if(d.pick){pickPeriodo(d.pick,t)}
+  else if(d.setmes){mes=d.setmes;render();atualizaPop()}
   else if(d.ano){mes=addM(mes,12*d.ano);render()}
   else if(d.filtroVa!==undefined){filt={q:'',cat:'',orig:'va',tipo:'g'};go('lancamentos')}
   else if(d.entrar!==undefined)entrar();
@@ -47,7 +49,7 @@ document.addEventListener('click',e=>{
   else if(d.delC){const c=S.categorias.find(x=>x.id===d.delC);const n=S.gastos.filter(g=>g.categoria===c.id).length;
     if(n){toast(`${c.nome} tem ${n} gasto${n>1?'s':''}; mova-os antes de excluir`);return}
     const prev=JSON.stringify(S);S.categorias=S.categorias.filter(x=>x.id!==c.id);save();render();toast('Categoria excluída',prev)}
-  else if(d.rel){window._rel=+d.rel;render()}
+  else if(d.setrel){const [k,m]=d.setrel.split('|');if(k==='rini'){relIni=m;if(relFim&&relIni>relFim)relFim=relIni}else{relFim=m;if(relIni&&relFim<relIni)relIni=relFim}render();atualizaPop()}
   else if(d.demo!==undefined)demo();
   else if(d.savecfg!==undefined){S.usuario.nome=document.getElementById('cfgNome').value.trim();S.usuario.diaVirada=Math.min(28,Math.max(1,+document.getElementById('cfgDia').value||1));save();toast('Configurações salvas')}
   else if(d.copy==='json')copiar(JSON.stringify(S),'Backup copiado');
@@ -73,3 +75,5 @@ window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(NAV.
 (()=>{const h=location.hash.slice(1);if(NAV.some(n=>n[0]===h))view=h})();
 render();
 initCloud();
+
+document.addEventListener('mousedown',e=>{if(!e.target.closest('#pop,[data-pick]'))closePop()});

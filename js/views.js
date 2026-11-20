@@ -11,7 +11,7 @@ function go(v){
   if(v==='mais'){openMais();return}
   view=v;if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);render();window.scrollTo(0,0);
 }
-function monthPicker(){return `<div class="month"><button class="icon-btn" data-mes="-1" aria-label="Mês anterior">${I.l}</button><span>${mesNome(mes)}</span><button class="icon-btn" data-mes="1" aria-label="Próximo mês">${I.r}</button></div>`}
+function monthPicker(){return `<div class="month"><button class="icon-btn" data-mes="-1" aria-label="Mês anterior">${I.l}</button><button class="pick" data-pick="mes" aria-label="Escolher mês">${mesNome(mes)}</button><button class="icon-btn" data-mes="1" aria-label="Próximo mês">${I.r}</button></div>`}
 
 /* ---------- telas ---------- */
 function render(){
@@ -28,23 +28,32 @@ function delta(cur,prev,invert){
 }
 
 let dashModo='mes';
-const modoToggle=()=>`<div class="seg" style="width:150px"><button class="${dashModo==='mes'?'on':''}" data-modo="mes">Mês</button><button class="${dashModo==='ano'?'on':''}" data-modo="ano">Ano</button></div>`;
-const anoPicker=()=>`<div class="month"><button class="icon-btn" data-ano="-1" aria-label="Ano anterior">${I.l}</button><span>${mes.slice(0,4)}</span><button class="icon-btn" data-ano="1" aria-label="Próximo ano">${I.r}</button></div>`;
+const modoToggle=()=>`<div class="seg" style="width:230px"><button class="${dashModo==='mes'?'on':''}" data-modo="mes">Mês</button><button class="${dashModo==='ano'?'on':''}" data-modo="ano">Ano</button><button class="${dashModo==='sempre'?'on':''}" data-modo="sempre">Sempre</button></div>`;
+const anoPicker=()=>`<div class="month ano"><button class="icon-btn" data-ano="-1" aria-label="Ano anterior">${I.l}</button><button class="pick" data-pick="ano" aria-label="Escolher ano">${mes.slice(0,4)}</button><button class="icon-btn" data-ano="1" aria-label="Próximo ano">${I.r}</button></div>`;
 const barraSvg=(x,y,w,h,cor,hx,hw,H,tip,op)=>`<g class="bg"${op!=null?` opacity="${op}"`:''}><rect class="b" x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${cor}"/><rect class="hit" x="${hx}" y="0" width="${hw}" height="${H}" fill="transparent" ${tip}/></g>`;
+function primeiroMes(){
+  const ds=[...S.gastos.map(g=>g.data),...S.rendas.map(x=>x.data||x.inicio)].filter(Boolean).map(ym);
+  return ds.length?ds.reduce((a,b)=>b<a?b:a):ym(today());
+}
 function dashAno(){
+  const sempre=dashModo==='sempre';
   const y=mes.slice(0,4),hojeM=ym(today());
-  const meses=Array.from({length:12},(_,i)=>`${y}-${String(i+1).padStart(2,'0')}`);
+  let meses;
+  if(sempre){meses=[];for(let m=primeiroMes();m<=hojeM;m=addM(m,1))meses.push(m)}
+  else meses=Array.from({length:12},(_,i)=>`${y}-${String(i+1).padStart(2,'0')}`);
+  const nm=meses.length;
+  const lbl=m=>sempre?`${mesCurto(m)}/${m.slice(2,4)}`:mesCurto(m);
   const rs=meses.map(m=>({m,futuro:m>hojeM,...resumo(m)}));
   const passados=rs.filter(x=>!x.futuro);
   const sum=k=>passados.reduce((s,x)=>s+x[k],0);
   const ent=sum('ent'),gas=sum('gastos'),saldo=sum('saldo'),va=sum('saldoVA'),entC=sum('entConta'),guard=sum('guardado')+sum('investido');
   const nM=passados.filter(x=>x.ent||x.gastos).length||1;
-  const head=`<div class="top"><h1>Visão do ano</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${modoToggle()}${anoPicker()}</div></div>`;
-  if(!passados.some(x=>x.ent||x.gastos))return head+`<div class="card empty"><h2>Sem lançamentos em ${y}</h2></div>`;
+  const head=`<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${sempre?'':anoPicker()}${modoToggle()}</div></div>`;
+  if(!passados.some(x=>x.ent||x.gastos))return head+`<div class="card empty"><h2>Sem lançamentos ${sempre?'ainda':'em '+y}</h2></div>`;
   // barras por mês
-  const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,x.gastos)));const W=720,H=180,bw=W/12*0.3;
-  const bars=rs.map((x,i)=>{const cx=(i+.5)*W/12,o=x.futuro?.25:1;
-    return barraSvg(cx-bw-1,H-x.ent/maxV*H,bw,x.ent/maxV*H,'#22C55E',cx-W/12/2,W/12/2,H,dtip(brl(x.ent)),o)+barraSvg(cx+1,H-x.gastos/maxV*H,bw,x.gastos/maxV*H,'#F04444',cx,W/12/2,H,dtip(brl(x.gastos)),o)}).join('');
+  const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,x.gastos)));const W=720,H=180,bw=W/nm*0.3;
+  const bars=rs.map((x,i)=>{const cx=(i+.5)*W/nm,o=x.futuro?.25:1;
+    return barraSvg(cx-bw-1,H-x.ent/maxV*H,bw,x.ent/maxV*H,'#22C55E',cx-W/nm/2,W/nm/2,H,dtip(brl(x.ent)),o)+barraSvg(cx+1,H-x.gastos/maxV*H,bw,x.gastos/maxV*H,'#F04444',cx,W/nm/2,H,dtip(brl(x.gastos)),o)}).join('');
   // categorias do ano
   const porCat={};passados.forEach(x=>x.G.filter(g=>g.carteira!=='va').forEach(g=>porCat[g.categoria]=(porCat[g.categoria]||0)+g.valor));
   const cats=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
@@ -53,15 +62,15 @@ function dashAno(){
    <div class="legend">${cats.slice(0,8).map(([id,v])=>{const c=cat(id);return `<div><i style="background:${c.cor}"></i><span>${esc(c.nome)}</span><span class="num">${fmt(v)}</span></div>`}).join('')}</div></div>`:'<div class="empty">Sem gastos.</div>';
   const maiorMes=passados.reduce((a,b)=>b.gastos>a.gastos?b:a);
   const tx=entC?saldo/entC*100:0;
-  const tabela=`<table class="tbl num"><tr><th>Mês</th><th class="r">Entradas</th><th class="r">Gastos</th><th class="r">Saldo</th></tr>${rs.map(x=>`<tr style="${x.futuro?'opacity:.35':''}"><td style="text-transform:capitalize"><button class="link" style="color:var(--t1);font-size:14px" data-vermes="${x.m}">${mesCurto(x.m)}</button></td><td class="r">${x.ent?fmt(x.ent):'—'}</td><td class="r">${x.gastos?fmt(x.gastos):'—'}</td><td class="r" style="color:${x.saldo<0?'var(--neg)':'var(--t1)'}">${x.ent||x.gastos?fmt(x.saldo):'—'}</td></tr>`).join('')}<tr style="font-weight:600"><td>Total</td><td class="r">${fmt(ent)}</td><td class="r">${fmt(gas)}</td><td class="r" style="color:${saldo<0?'var(--neg)':'var(--pos)'}">${fmt(saldo)}</td></tr></table>`;
+  const tabela=`<table class="tbl num"><tr><th>Mês</th><th class="r">Entradas</th><th class="r">Gastos</th><th class="r">Saldo</th></tr>${rs.map(x=>`<tr style="${x.futuro?'opacity:.35':''}"><td style="text-transform:capitalize"><button class="link" style="color:var(--t1);font-size:14px" data-vermes="${x.m}">${lbl(x.m)}</button></td><td class="r">${x.ent?fmt(x.ent):'—'}</td><td class="r">${x.gastos?fmt(x.gastos):'—'}</td><td class="r" style="color:${x.saldo<0?'var(--neg)':'var(--t1)'}">${x.ent||x.gastos?fmt(x.saldo):'—'}</td></tr>`).join('')}<tr style="font-weight:600"><td>Total</td><td class="r">${fmt(ent)}</td><td class="r">${fmt(gas)}</td><td class="r" style="color:${saldo<0?'var(--neg)':'var(--pos)'}">${fmt(saldo)}</td></tr></table>`;
   return head+`<div class="grid">
    <div class="card stat c3"><div class="cap">Entradas · salário</div><div class="val">${money(ent)}</div><span class="small">média ${brl(ent/nM)}/mês</span></div>
    <div class="card stat c3"><div class="cap">Gastos · salário</div><div class="val">${money(gas)}</div><span class="small">média ${brl(gas/nM)}/mês</span></div>
-   <div class="card stat c3"><div class="cap">Sobrou no ano</div><div class="val" style="color:${saldo<0?'var(--neg)':'var(--t1)'}">${money(saldo)}</div><span class="small">${entC?`taxa de poupança ${tx.toFixed(0)}%`:'Conta'}${guard?` · ${brl(guard)} guardados/investidos`:''}</span></div>
-   <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">VA no ano</div><div class="val">${money(sum('gVA'))}</div><span class="small">gastos de ${brl(sum('entVA'))} creditados · sobra ${brl(va)}</span></div>
+   <div class="card stat c3"><div class="cap">${sempre?'Sobrou no total':'Sobrou no ano'}</div><div class="val" style="color:${saldo<0?'var(--neg)':'var(--t1)'}">${money(saldo)}</div></div>
+   <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">${sempre?'VA no total':'VA no ano'}</div><div class="val">${money(sum('gVA'))}</div></div>
    <div class="card c12"><div class="card-h"><h2>Mês a mês</h2><span class="small"><span style="color:var(--pos)">■</span> entradas &nbsp;<span style="color:var(--neg)">■</span> gastos</span></div>
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="180" preserveAspectRatio="none">${bars}</svg>
-    <div class="small" style="display:flex;margin-top:8px;text-transform:capitalize">${rs.map(x=>`<span style="flex:1;text-align:center">${mesCurto(x.m)}</span>`).join('')}</div>
+    <div class="small" style="display:flex;margin-top:8px;text-transform:capitalize">${rs.map((x,i)=>`<span style="flex:1;text-align:center;min-width:0;white-space:nowrap">${i%Math.ceil(nm/12)===0?lbl(x.m):''}</span>`).join('')}</div>
     <p class="small" style="margin-top:12px">Mês com mais gastos: <b style="color:var(--t1);text-transform:capitalize">${mesNome(maiorMes.m)}</b> (${brl(maiorMes.gastos)})</p></div>
    <div class="card c6"><div class="card-h"><h2>Gastos do salário</h2><span class="small">por categoria</span></div>${donut}</div>
    <div class="card c6" style="overflow-x:auto"><div class="card-h"><h2>Resumo por mês</h2><span class="small">toque no mês para abrir</span></div>${tabela}</div>
@@ -69,7 +78,7 @@ function dashAno(){
 }
 const loginBanner=()=>sb&&!sbUser?`<div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-color:rgba(198,244,50,.3)"><span class="small" style="flex:1;min-width:200px">☁️ Seus dados estão só neste aparelho. Entre para salvar na nuvem e acessar de qualquer lugar.</span><button class="btn pri" data-go="config">Entrar</button></div>`:'';
 function dashboard(){
-  if(dashModo==='ano')return dashAno();
+  if(dashModo==='ano'||dashModo==='sempre')return dashAno();
   const r=resumo(mes),p=resumo(addM(mes,-1));
   const semDados=!S.rendas.length&&!S.gastos.length;
   // por dia até o próximo salário
@@ -89,7 +98,7 @@ function dashboard(){
    <div class="card stat c3"><div class="cap">Saldo disponível</div><div class="val" style="color:${r.saldo<0?'var(--neg)':'var(--t1)'}">${money(r.saldo)}</div><span class="small">Conta: entradas − gastos${r.guardado?' − guardado':''}${r.investido?' − investido':''}</span></div>
    <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">Saldo do VA</div><div class="val">${money(r.saldoVA)}</div><span class="small">gastou ${brl(r.gVA)} de ${brl(r.entVA)}</span></div>`;
 
-  if(semDados)return `<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${modoToggle()}${monthPicker()}</div></div>
+  if(semDados)return `<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}${modoToggle()}</div></div>
    <div class="grid">${cards}<div class="card c12 empty"><h2>Comece cadastrando sua renda</h2><p class="hint">Salário e VA entram sozinhos todo mês. Depois é só lançar os gastos pelo botão “+”.</p>
    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn pri" data-new="renda">Cadastrar salário/VA</button><button class="btn sec" data-demo>Ver com dados de exemplo</button></div></div></div>`;
 
@@ -124,7 +133,7 @@ function dashboard(){
   const orc=S.categorias.filter(c=>c.orcamento>0).map(c=>({c,v:porCatAll[c.id]||0})).sort((a,b)=>b.v/b.c.orcamento-a.v/a.c.orcamento).slice(0,5);
   const bars=orc.length?orc.map(budgetRow).join(''):`<div class="empty" style="padding:16px">Defina orçamentos em <button class="link" data-go="categorias">Categorias</button>.</div>`;
 
-  return `<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${modoToggle()}${monthPicker()}</div></div>
+  return `<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}${modoToggle()}</div></div>
   <div class="grid">
    ${cards}
    ${porDia!==null?`<div class="card c12"><div class="daily"><span class="cap">Você pode gastar</span><span class="num" style="font-size:28px;font-weight:600;color:${porDia<0?'var(--neg)':'var(--accent)'}"><span class="cur">R$</span>${fmt(porDia)}</span><span class="small">por dia nos próximos ${diasRest} dias${sal?' até o próximo salário':''}</span></div></div>`:''}
@@ -210,9 +219,13 @@ function categorias(){
     <div class="acts" style="opacity:1"><button class="icon-btn" data-edit-c="${c.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-del-c="${c.id}" aria-label="Excluir">${I.trash}</button></div></div>`}).join('')}</div>`;
 }
 
+let relIni=null,relFim=null;
 function relatorios(){
-  const n=window._rel||6;
-  const meses=Array.from({length:n},(_,i)=>addM(mes,i-n+1));
+  if(!relFim)relFim=ym(today());
+  if(!relIni)relIni=addM(relFim,-5);
+  if(mdiff(relIni,relFim)>59)relIni=addM(relFim,-59);
+  const meses=[];for(let m=relIni;m<=relFim;m=addM(m,1))meses.push(m);
+  const n=meses.length;
   const rs=meses.map(m=>({m,...resumo(m)}));
   const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,x.gastos)));
   const W=600,H=200,bw=(W/n)*0.32;
@@ -224,7 +237,7 @@ function relatorios(){
   const usadas=S.categorias.filter(c=>rs.some(x=>x.G.some(g=>g.categoria===c.id)));
   const catTbl=usadas.length?`<table class="tbl num"><tr><th>Categoria</th>${rs.map(x=>`<th class="r" style="text-transform:capitalize">${mesCurto(x.m)}</th>`).join('')}</tr>${usadas.map(c=>`<tr><td><span style="color:${c.cor}">●</span> ${esc(c.nome)}</td>${rs.map(x=>{const v=x.G.filter(g=>g.categoria===c.id).reduce((s,g)=>s+g.valor,0);return `<td class="r ${v?'':'muted'}">${v?fmt(v):'—'}</td>`}).join('')}</tr>`).join('')}</table>`:`<div class="empty">Sem gastos no período.</div>`;
   const totE=rs.reduce((s,x)=>s+x.entConta,0),totS=rs.reduce((s,x)=>s+x.saldo,0);
-  return `<div class="top"><h1>Relatórios</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}<div class="seg" style="width:160px"><button class="${n===6?'on':''}" data-rel="6">6 meses</button><button class="${n===12?'on':''}" data-rel="12">12 meses</button></div></div></div>
+  return `<div class="top"><h1>Relatórios</h1><div class="rng"><div class="rf"><span class="small">De</span><div class="month"><button class="pick" data-pick="rini" aria-label="Mês inicial">${mesNome(relIni)}</button></div></div><div class="rf"><span class="small">Até</span><div class="month"><button class="pick" data-pick="rfim" aria-label="Mês final">${mesNome(relFim)}</button></div></div></div></div>
   <div class="grid">
    <div class="card stat c4"><div class="cap">Entradas · salário</div><div class="val">${money(rs.reduce((s,x)=>s+x.ent,0))}</div></div>
    <div class="card stat c4"><div class="cap">Gastos · salário</div><div class="val">${money(rs.reduce((s,x)=>s+x.gastos,0))}</div></div>
@@ -291,3 +304,28 @@ function saveMov(id,sinal){
   save();closeModal();render();const t=metaTotal(x);toast(t>=x.alvo&&sinal>0?`🎉 Meta “${x.nome}” alcançada!`:`${sinal>0?'Guardado':'Retirado'}: ${brl(v)}`,prev);
 }
 
+
+function closePop(){const p=document.getElementById('pop');if(p)p.remove()}
+function popHtml(tipo){
+  const rel=tipo==='rini'||tipo==='rfim',atual=tipo==='rini'?relIni:tipo==='rfim'?relFim:mes;
+  const ext=rel?[relIni,relFim]:[mes];
+  const hojeM=ym(today()),ini=[primeiroMes(),...ext].reduce((a,b)=>b<a?b:a),fim=[hojeM,...ext].reduce((a,b)=>b>a?b:a);
+  const meses=[];for(let m=ini;m<=fim;m=addM(m,1))meses.push(m);
+  if(tipo==='ano'){
+    const anos=[...new Set(meses.map(m=>m.slice(0,4)))];
+    return `<div class="chips">${anos.map(a=>`<button class="chip ${a===mes.slice(0,4)?'on':''}" data-setmes="${a}-${mes.slice(5)}">${a}</button>`).join('')}</div>`;
+  }
+  const anos=[...new Set(meses.map(m=>m.slice(0,4)))].reverse();
+  return anos.map(a=>`<div class="cap" style="margin:4px 0 8px">${a}</div><div class="chips">${meses.filter(m=>m.startsWith(a)).reverse().map(m=>`<button class="chip ${m===atual?'on':''}" style="text-transform:capitalize" ${rel?`data-setrel="${tipo}|${m}"`:`data-setmes="${m}"`}>${mesCurto(m)}</button>`).join('')}</div>`).join('<div style="height:12px"></div>');
+}
+function pickPeriodo(tipo,btn){
+  const abriu=document.getElementById('pop');closePop();
+  if(abriu&&abriu.dataset.tipo===tipo)return;
+  const pop=document.createElement('div');pop.id='pop';pop.dataset.tipo=tipo;pop.className='pop';pop.innerHTML=popHtml(tipo);
+  document.body.appendChild(pop);
+  const r=btn.getBoundingClientRect(),w=pop.offsetWidth;
+  pop.style.top=(r.bottom+window.scrollY+8)+'px';
+  pop.style.left=Math.max(8,Math.min(r.left+window.scrollX+r.width/2-w/2,document.documentElement.clientWidth-w-8))+'px';
+  pop.style.maxHeight='min(420px,70vh)';
+}
+function atualizaPop(){const p=document.getElementById('pop');if(!p)return;const y=p.scrollTop;p.innerHTML=popHtml(p.dataset.tipo);p.scrollTop=y}
