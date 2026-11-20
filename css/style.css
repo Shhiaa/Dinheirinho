@@ -145,3 +145,7 @@ svg[data-linechart]{cursor:crosshair}
 .rf{display:flex;align-items:center;gap:8px}
 .rf .small{min-width:28px;text-align:right}
 .rf .month .pick{min-width:168px}
+.dropov{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;background:rgba(10,10,10,.82);pointer-events:none}
+.dropov.show{display:flex}
+.dropov>div{border:2px dashed var(--accent);border-radius:20px;padding:48px 64px;text-align:center;font-size:20px;font-weight:600;color:var(--accent);max-width:calc(100vw - 32px)}
+.dropov small{display:block;margin-top:8px;font-size:13px;font-weight:400;color:var(--t2)}

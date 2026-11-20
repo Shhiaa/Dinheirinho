@@ -85,3 +85,24 @@ render();
 initCloud();
 
 document.addEventListener('mousedown',e=>{if(!e.target.closest('#pop,[data-pick]'))closePop()});
+
+/* ---------- arrastar e soltar arquivo para importar (CSV, planilha ou backup JSON) ---------- */
+(()=>{
+  let n=0,ov=null;
+  const temArquivo=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
+  const mostra=on=>{
+    if(!ov){ov=document.createElement('div');ov.className='dropov';ov.innerHTML='<div>Solte para importar<small>Extrato do PicPay, planilha (.csv) ou backup (.json)</small></div>';document.body.appendChild(ov)}
+    ov.classList.toggle('show',on);
+  };
+  document.addEventListener('dragenter',e=>{if(!temArquivo(e))return;e.preventDefault();n++;mostra(true)});
+  document.addEventListener('dragover',e=>{if(!temArquivo(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy'});
+  document.addEventListener('dragleave',e=>{if(!temArquivo(e))return;n=Math.max(0,n-1);if(!n)mostra(false)});
+  document.addEventListener('drop',async e=>{
+    if(!temArquivo(e))return;e.preventDefault();n=0;mostra(false);
+    for(const f of [...e.dataTransfer.files]){
+      const txt=await f.text();
+      if(/\.json$/i.test(f.name)||txt.trimStart().startsWith('{'))confirmar('Restaurar este backup substitui os dados atuais. Dá para desfazer logo depois.',()=>importar(txt));
+      else importarCSV(txt);
+    }
+  });
+})();
