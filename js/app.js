@@ -1,7 +1,8 @@
 /* ---------- eventos ---------- */
 document.addEventListener('click',e=>{
-  const t=e.target.closest('button,label');if(!t)return;const d=t.dataset;
+  const t=e.target.closest('button,label,[data-fcat],[data-vermes]');if(!t)return;const d=t.dataset;
   if(d.close!==undefined&&!d.go)closeModal();
+  if(d.fcat){dashCat=dashCat===d.fcat?null:d.fcat;render();return}
   if(d.go){if(d.close!==undefined)closeModal();go(d.go)}
   else if(d.new==='gasto')gastoForm();
   else if(d.categorizar!==undefined){catPular=new Set();categorizar()}

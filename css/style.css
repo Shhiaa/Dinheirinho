@@ -149,3 +149,9 @@ svg[data-linechart]{cursor:crosshair}
 .dropov.show{display:flex}
 .dropov>div{border:2px dashed var(--accent);border-radius:20px;padding:48px 64px;text-align:center;font-size:20px;font-weight:600;color:var(--accent);max-width:calc(100vw - 32px)}
 .dropov small{display:block;margin-top:8px;font-size:13px;font-weight:400;color:var(--t2)}
+.legend div[data-fcat]{cursor:pointer;border-radius:6px;margin:0 -6px;padding:2px 6px;transition:background .12s}
+.legend div[data-fcat]:hover{background:var(--elev)}
+g.bg:has([data-vermes]){cursor:pointer}
+.legend div.dim{opacity:.4}
+.legend div.sel{background:var(--elev)}
+circle[data-fcat]{cursor:pointer}

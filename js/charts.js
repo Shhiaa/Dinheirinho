@@ -33,7 +33,7 @@ function lineHover(svg,e){
   const ideal=c.ideal*i/(c.fim-1),temReal=i<c.limite;
   const linhas=[`Dia ${i+1}`];
   if(temReal)linhas.push('Gasto acumulado '+brl(c.cum[i]));
-  linhas.push('Ritmo ideal '+brl(ideal));
+  if(c.ideal>0)linhas.push((c.rotulo||'Ritmo ideal')+' '+brl(ideal));
   showTip(linhas.join('\n'),e.clientX,e.clientY);
   const gx=r.left+X(i)/c.W*r.width;
   guideEl.style.left=gx+'px';guideEl.style.top=r.top+'px';guideEl.style.height=r.height+'px';guideEl.classList.add('show');

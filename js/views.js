@@ -27,7 +27,8 @@ function delta(cur,prev,invert){
   return `<span class="delta" style="color:${good?'var(--pos)':'var(--neg)'}">${up?'▲':'▼'} ${Math.abs(p).toFixed(0)}% <span class="muted">vs. mês anterior</span></span>`;
 }
 
-let dashModo='mes';
+let dashModo='mes',dashCat=null;
+const catFiltro=()=>dashCat&&S.categorias.some(c=>c.id===dashCat)?dashCat:null;
 const modoToggle=()=>`<div class="seg" style="width:230px"><button class="${dashModo==='mes'?'on':''}" data-modo="mes">Mês</button><button class="${dashModo==='ano'?'on':''}" data-modo="ano">Ano</button><button class="${dashModo==='sempre'?'on':''}" data-modo="sempre">Sempre</button></div>`;
 const anoPicker=()=>`<div class="month ano"><button class="icon-btn" data-ano="-1" aria-label="Ano anterior">${I.l}</button><button class="pick" data-pick="ano" aria-label="Escolher ano">${mes.slice(0,4)}</button><button class="icon-btn" data-ano="1" aria-label="Próximo ano">${I.r}</button></div>`;
 const barraSvg=(x,y,w,h,cor,hx,hw,H,tip,op)=>`<g class="bg"${op!=null?` opacity="${op}"`:''}><rect class="b" x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${cor}"/><rect class="hit" x="${hx}" y="0" width="${hw}" height="${H}" fill="transparent" ${tip}/></g>`;
@@ -36,7 +37,7 @@ function primeiroMes(){
   return ds.length?ds.reduce((a,b)=>b<a?b:a):ym(today());
 }
 function dashAno(){
-  const sempre=dashModo==='sempre';
+  const sempre=dashModo==='sempre',fc=catFiltro();
   const y=mes.slice(0,4),hojeM=ym(today());
   let meses;
   if(sempre){meses=[];for(let m=primeiroMes();m<=hojeM;m=addM(m,1))meses.push(m)}
@@ -45,33 +46,35 @@ function dashAno(){
   const lbl=m=>sempre?`${mesCurto(m)}/${m.slice(2,4)}`:mesCurto(m);
   const rs=meses.map(m=>({m,futuro:m>hojeM,...resumo(m)}));
   const passados=rs.filter(x=>!x.futuro);
+  const gx=x=>fc?x.G.filter(g=>g.carteira!=='va'&&g.categoria===fc).reduce((t,g)=>t+g.valor,0):x.gastos;
   const sum=k=>passados.reduce((s,x)=>s+x[k],0);
-  const ent=sum('ent'),gas=sum('gastos'),saldo=sum('saldo'),va=sum('saldoVA'),entC=sum('entConta'),guard=sum('guardado')+sum('investido');
+  const gasTotal=sum('gastos'),gas=passados.reduce((t,x)=>t+gx(x),0);
+  const ent=sum('ent'),saldo=sum('saldo'),va=sum('saldoVA'),entC=sum('entConta'),guard=sum('guardado')+sum('investido');
   const nM=passados.filter(x=>x.ent||x.gastos).length||1;
   const head=`<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${sempre?'':anoPicker()}${modoToggle()}</div></div>`;
   if(!passados.some(x=>x.ent||x.gastos))return head+`<div class="card empty"><h2>Sem lançamentos ${sempre?'ainda':'em '+y}</h2></div>`;
   // barras por mês
-  const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,x.gastos)));const W=720,H=180,bw=W/nm*0.3;
+  const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,gx(x))));const W=720,H=180,bw=W/nm*0.3;
   const bars=rs.map((x,i)=>{const cx=(i+.5)*W/nm,o=x.futuro?.25:1;
-    return barraSvg(cx-bw-1,H-x.ent/maxV*H,bw,x.ent/maxV*H,'#22C55E',cx-W/nm/2,W/nm/2,H,dtip(brl(x.ent)),o)+barraSvg(cx+1,H-x.gastos/maxV*H,bw,x.gastos/maxV*H,'#F04444',cx,W/nm/2,H,dtip(brl(x.gastos)),o)}).join('');
+    return barraSvg(cx-bw-1,H-x.ent/maxV*H,bw,x.ent/maxV*H,'#22C55E',cx-W/nm/2,W/nm/2,H,dtip(brl(x.ent))+` data-vermes="${x.m}"`,o)+barraSvg(cx+1,H-gx(x)/maxV*H,bw,gx(x)/maxV*H,'#F04444',cx,W/nm/2,H,dtip(brl(gx(x)))+` data-vermes="${x.m}"`,o)}).join('');
   // categorias do ano
   const porCat={};passados.forEach(x=>x.G.filter(g=>g.carteira!=='va').forEach(g=>porCat[g.categoria]=(porCat[g.categoria]||0)+g.valor));
   const cats=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
   let acc=0;const R=60,C=2*Math.PI*R;
-  const donut=cats.length?`<div class="donut-wrap"><svg width="160" height="160" viewBox="0 0 160 160"><circle r="${R}" cx="80" cy="80" fill="none" stroke="#262626" stroke-width="18"/>${cats.map(([id,v])=>{const c=cat(id),len=v/gas*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" stroke-width="18" stroke-dasharray="${Math.max(len-2,.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)" ${dtip(c.nome,brl(v)+' · '+(v/gas*100).toFixed(1)+'%')}/>`;acc+=len;return s}).join('')}<text x="80" y="76" text-anchor="middle" fill="#A1A1A1" font-size="11">TOTAL</text><text x="80" y="96" text-anchor="middle" fill="#FAFAFA" font-size="15" font-weight="600">${fmt(gas)}</text></svg>
-   <div class="legend">${cats.slice(0,8).map(([id,v])=>{const c=cat(id);return `<div><i style="background:${c.cor}"></i><span>${esc(c.nome)}</span><span class="num">${fmt(v)}</span></div>`}).join('')}</div></div>`:'<div class="empty">Sem gastos.</div>';
-  const maiorMes=passados.reduce((a,b)=>b.gastos>a.gastos?b:a);
+  const donut=cats.length?`<div class="donut-wrap"><svg width="160" height="160" viewBox="0 0 160 160"><circle r="${R}" cx="80" cy="80" fill="none" stroke="#262626" stroke-width="18"/>${cats.map(([id,v])=>{const c=cat(id),len=v/gasTotal*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" style="opacity:${fc&&id!==fc?.25:1}" stroke-width="18" stroke-dasharray="${Math.max(len-2,.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)" ${dtip(c.nome,brl(v)+' · '+(v/gasTotal*100).toFixed(1)+'%')} data-fcat="${id}"/>`;acc+=len;return s}).join('')}<text x="80" y="76" text-anchor="middle" fill="#A1A1A1" font-size="11">TOTAL</text><text x="80" y="96" text-anchor="middle" fill="#FAFAFA" font-size="15" font-weight="600">${fmt(gasTotal)}</text></svg>
+   <div class="legend">${cats.slice(0,8).map(([id,v])=>{const c=cat(id);return `<div data-fcat="${id}" class="${fc?(fc===id?'sel':'dim'):''}"><i style="background:${c.cor}"></i><span>${esc(c.nome)}</span><span class="num">${fmt(v)}</span></div>`}).join('')}</div></div>`:'<div class="empty">Sem gastos.</div>';
+  const maiorMes=passados.reduce((a,b)=>gx(b)>gx(a)?b:a);
   const tx=entC?saldo/entC*100:0;
-  const tabela=`<table class="tbl num"><tr><th>Mês</th><th class="r">Entradas</th><th class="r">Gastos</th><th class="r">Saldo</th></tr>${rs.map(x=>`<tr style="${x.futuro?'opacity:.35':''}"><td style="text-transform:capitalize"><button class="link" style="color:var(--t1);font-size:14px" data-vermes="${x.m}">${lbl(x.m)}</button></td><td class="r">${x.ent?fmt(x.ent):'—'}</td><td class="r">${x.gastos?fmt(x.gastos):'—'}</td><td class="r" style="color:${x.saldo<0?'var(--neg)':'var(--t1)'}">${x.ent||x.gastos?fmt(x.saldo):'—'}</td></tr>`).join('')}<tr style="font-weight:600"><td>Total</td><td class="r">${fmt(ent)}</td><td class="r">${fmt(gas)}</td><td class="r" style="color:${saldo<0?'var(--neg)':'var(--pos)'}">${fmt(saldo)}</td></tr></table>`;
+  const tabela=`<table class="tbl num"><tr><th>Mês</th><th class="r">Entradas</th><th class="r">Gastos</th><th class="r">Saldo</th></tr>${rs.map(x=>`<tr style="${x.futuro?'opacity:.35':''}"><td style="text-transform:capitalize"><button class="link" style="color:var(--t1);font-size:14px" data-vermes="${x.m}">${lbl(x.m)}</button></td><td class="r">${x.ent?fmt(x.ent):'—'}</td><td class="r">${gx(x)?fmt(gx(x)):'—'}</td><td class="r" style="color:${x.saldo<0?'var(--neg)':'var(--t1)'}">${x.ent||x.gastos?fmt(x.saldo):'—'}</td></tr>`).join('')}<tr style="font-weight:600"><td>Total</td><td class="r">${fmt(ent)}</td><td class="r">${fmt(gas)}</td><td class="r" style="color:${saldo<0?'var(--neg)':'var(--pos)'}">${fmt(saldo)}</td></tr></table>`;
   return head+`<div class="grid">
    <div class="card stat c3"><div class="cap">Entradas · salário</div><div class="val">${money(ent)}</div><span class="small">média ${brl(ent/nM)}/mês</span></div>
-   <div class="card stat c3"><div class="cap">Gastos · salário</div><div class="val">${money(gas)}</div><span class="small">média ${brl(gas/nM)}/mês</span></div>
+   <div class="card stat c3"><div class="cap">${fc?'Gastos · '+esc(cat(fc).nome):'Gastos · salário'}</div><div class="val" style="color:var(--neg)">${money(gas)}</div></div>
    <div class="card stat c3"><div class="cap">${sempre?'Sobrou no total':'Sobrou no ano'}</div><div class="val" style="color:${saldo<0?'var(--neg)':'var(--t1)'}">${money(saldo)}</div></div>
    <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">${sempre?'VA no total':'VA no ano'}</div><div class="val">${money(sum('gVA'))}</div></div>
    <div class="card c12"><div class="card-h"><h2>Mês a mês</h2><span class="small"><span style="color:var(--pos)">■</span> entradas &nbsp;<span style="color:var(--neg)">■</span> gastos</span></div>
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="180" preserveAspectRatio="none">${bars}</svg>
     <div class="small" style="display:flex;margin-top:8px;text-transform:capitalize">${rs.map((x,i)=>`<span style="flex:1;text-align:center;min-width:0;white-space:nowrap">${i%Math.ceil(nm/12)===0?lbl(x.m):''}</span>`).join('')}</div>
-    <p class="small" style="margin-top:12px">Mês com mais gastos: <b style="color:var(--t1);text-transform:capitalize">${mesNome(maiorMes.m)}</b> (${brl(maiorMes.gastos)})</p></div>
+    <p class="small" style="margin-top:12px">Mês com mais gastos: <b style="color:var(--t1);text-transform:capitalize">${mesNome(maiorMes.m)}</b> (${brl(gx(maiorMes))})</p></div>
    <div class="card c6"><div class="card-h"><h2>Gastos do salário</h2><span class="small">por categoria</span></div>${donut}</div>
    <div class="card c6" style="overflow-x:auto"><div class="card-h"><h2>Resumo por mês</h2><span class="small">toque no mês para abrir</span></div>${tabela}</div>
   </div>`;
@@ -79,7 +82,7 @@ function dashAno(){
 const loginBanner=()=>sb&&!sbUser?`<div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-color:rgba(198,244,50,.3)"><span class="small" style="flex:1;min-width:200px">☁️ Seus dados estão só neste aparelho. Entre para salvar na nuvem e acessar de qualquer lugar.</span><button class="btn pri" data-go="config">Entrar</button></div>`:'';
 function dashboard(){
   if(dashModo==='ano'||dashModo==='sempre')return dashAno();
-  const r=resumo(mes),p=resumo(addM(mes,-1));
+  const r=resumo(mes),p=resumo(addM(mes,-1)),fc=catFiltro();
   const semDados=!S.rendas.length&&!S.gastos.length;
   // por dia até o próximo salário
   const hoje=today(),noMes=ym(hoje)===mes;
@@ -94,7 +97,7 @@ function dashboard(){
 
   const cards=`
    <div class="card stat c3"><div class="cap">Entradas · salário</div><div class="val">${money(r.ent)}</div>${delta(r.ent,p.ent)}</div>
-   <div class="card stat c3"><div class="cap">Gastos · salário</div><div class="val">${money(r.gastos)}</div>${delta(r.gastos,p.gastos,true)}</div>
+   <div class="card stat c3"><div class="cap">${fc?'Gastos · '+esc(cat(fc).nome):'Gastos · salário'}</div><div class="val" style="color:var(--neg)">${money(fc?r.G.filter(g=>g.carteira!=='va'&&g.categoria===fc).reduce((t,g)=>t+g.valor,0):r.gastos)}</div></div>
    <div class="card stat c3"><div class="cap">Saldo disponível</div><div class="val" style="color:${r.saldo<0?'var(--neg)':'var(--t1)'}">${money(r.saldo)}</div><span class="small">Conta: entradas − gastos${r.guardado?' − guardado':''}${r.investido?' − investido':''}</span></div>
    <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">Saldo do VA</div><div class="val">${money(r.saldoVA)}</div><span class="small">gastou ${brl(r.gVA)} de ${brl(r.entVA)}</span></div>`;
 
@@ -110,27 +113,29 @@ function dashboard(){
   if(!cats.length)donut=`<div class="empty">Nenhum gasto neste mês.</div>`;
   else{
     let acc=0;const R=60,C=2*Math.PI*R;
-    const segs=cats.map(([id,v])=>{const c=cat(id);const len=v/total*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" stroke-width="18" stroke-dasharray="${Math.max(len-2,0.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)" ${dtip(c.nome,brl(v)+' · '+(v/total*100).toFixed(1)+'%')}/>`;acc+=len;return s}).join('');
+    const segs=cats.map(([id,v])=>{const c=cat(id);const len=v/total*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" style="opacity:${fc&&id!==fc?.25:1}" stroke-width="18" stroke-dasharray="${Math.max(len-2,0.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)" ${dtip(c.nome,brl(v)+' · '+(v/total*100).toFixed(1)+'%')} data-fcat="${id}"/>`;acc+=len;return s}).join('');
     donut=`<div class="donut-wrap"><svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Gastos por categoria"><circle r="${R}" cx="80" cy="80" fill="none" stroke="#262626" stroke-width="18"/>${segs}<text x="80" y="76" text-anchor="middle" fill="#A1A1A1" font-size="11" letter-spacing=".5">TOTAL</text><text x="80" y="96" text-anchor="middle" fill="#FAFAFA" font-size="16" font-weight="600" class="num">${fmt(total)}</text></svg>
-    <div class="legend">${cats.slice(0,7).map(([id,v])=>{const c=cat(id);return `<div><i style="background:${c.cor}"></i><span>${esc(c.nome)}</span><span class="num">${(v/total*100).toFixed(0)}%</span></div>`}).join('')}</div></div>`;
+    <div class="legend">${cats.slice(0,7).map(([id,v])=>{const c=cat(id);return `<div data-fcat="${id}" class="${fc?(fc===id?'sel':'dim'):''}"><i style="background:${c.cor}"></i><span>${esc(c.nome)}</span><span class="num">${(v/total*100).toFixed(0)}%</span></div>`}).join('')}</div></div>`;
   }
 
   // linha acumulada vs ritmo ideal
   const W=560,H=160,pad=4;
-  const diario=Array(fimMes).fill(0);r.G.filter(g=>g.carteira!=='va').forEach(g=>diario[+g.data.slice(8)-1]+=g.valor);
+  const diario=Array(fimMes).fill(0);r.G.filter(g=>g.carteira!=='va'&&(!fc||g.categoria===fc)).forEach(g=>diario[+g.data.slice(8)-1]+=g.valor);
+  const ideal=fc?(cat(fc).orcamento||0):r.entConta;
   let a=0;const cum=diario.map(v=>a+=v);
   const limite=noMes?+hoje.slice(8):(mdiff(mes,ym(hoje))>0?fimMes:0);
-  const maxY=Math.max(r.entConta,a,1);
+  const maxY=Math.max(ideal,a,1);
   const X=i=>pad+i/(fimMes-1)*(W-2*pad),Y=v=>H-pad-v/maxY*(H-2*pad);
   const pts=cum.slice(0,limite).map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
-  chartLine={W,H,pad,fim:fimMes,cum,limite,ideal:r.entConta,maxY};
+  chartLine={W,H,pad,fim:fimMes,cum,limite,ideal,maxY,rotulo:fc?'Orçamento':'Ritmo ideal'};
   const linha=`<svg data-linechart viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="Gasto acumulado por dia">
-   <line x1="${X(0)}" y1="${Y(0)}" x2="${X(fimMes-1)}" y2="${Y(r.entConta)}" stroke="#6B6B6B" stroke-dasharray="4 4" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+   ${ideal?`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(fimMes-1)}" y2="${Y(ideal)}" stroke="#6B6B6B" stroke-dasharray="4 4" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`:''}
    ${limite?`<polyline points="${pts}" fill="none" stroke="#C6F432" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`:''}</svg>
-   <div class="small" style="display:flex;justify-content:space-between;margin-top:8px"><span>dia 1</span><span><span style="color:var(--accent)">━</span> gasto acumulado &nbsp; <span class="muted">┅</span> ritmo ideal</span><span>dia ${fimMes}</span></div>`;
+   <div class="small" style="display:flex;justify-content:space-between;margin-top:8px"><span>dia 1</span><span><span style="color:var(--accent)">━</span> gasto acumulado${ideal?` &nbsp; <span class="muted">┅</span> ${fc?'orçamento':'ritmo ideal'}`:''}</span><span>dia ${fimMes}</span></div>`;
 
+  const rF=fc?r.G.filter(g=>g.categoria===fc):r.G;
   // orçamentos
-  const orc=S.categorias.filter(c=>c.orcamento>0).map(c=>({c,v:porCatAll[c.id]||0})).sort((a,b)=>b.v/b.c.orcamento-a.v/a.c.orcamento).slice(0,5);
+  const orc=S.categorias.filter(c=>c.orcamento>0&&(!fc||c.id===fc)).map(c=>({c,v:porCatAll[c.id]||0})).sort((a,b)=>b.v/b.c.orcamento-a.v/a.c.orcamento).slice(0,5);
   const bars=orc.length?orc.map(budgetRow).join(''):`<div class="empty" style="padding:16px">Defina orçamentos em <button class="link" data-go="categorias">Categorias</button>.</div>`;
 
   return `<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}${modoToggle()}</div></div>
@@ -139,6 +144,7 @@ function dashboard(){
    ${porDia!==null?`<div class="card c12"><div class="daily"><span class="cap">Você pode gastar</span><span class="num" style="font-size:28px;font-weight:600;color:${porDia<0?'var(--neg)':'var(--accent)'}"><span class="cur">R$</span>${fmt(porDia)}</span><span class="small">por dia nos próximos ${diasRest} dias${sal?' até o próximo salário':''}</span></div></div>`:''}
    <div class="card c5"><div class="card-h"><h2>Gastos do salário</h2><span class="small">por categoria</span></div>${donut}</div>
    <div class="card c7"><div class="card-h"><h2>Ritmo do mês</h2><span class="small">só Conta</span></div>${linha}</div>
+   ${S.metas.length?`<div class="card c12"><div class="card-h"><h2>Metas</h2><button class="link" data-go="metas">Ver todas</button></div><div class="grid">${S.metas.slice(0,3).map(x=>{const t=metaTotal(x),p=Math.min(t/x.alvo*100,100);return `<div class="c4" style="min-width:0"><div class="l small" style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.icone} ${esc(x.nome)}</span><span class="num">${p.toFixed(0)}%</span></div><div class="bar"><i style="width:${p}%;background:${p>=100?'var(--pos)':'var(--accent)'}"></i></div></div>`}).join('')}</div></div>`:''}
    ${r.entVA||r.gVA?(()=>{const pv=r.entVA?Math.min(r.gVA/r.entVA*100,100):100;const vc=Object.entries(porCatVA).sort((a,b)=>b[1]-a[1]);
     return `<div class="card c12" style="border-color:rgba(139,124,246,.3)"><div class="card-h"><h2 style="color:var(--va)">🍎 Vale-alimentação / refeição</h2><button class="link" style="color:var(--va)" data-filtro-va>Ver gastos do VA</button></div>
      <div class="grid"><div class="c4"><div class="cap">Creditado</div><div class="num" style="font-size:22px;font-weight:600;margin-top:4px">${money(r.entVA)}</div></div>
@@ -148,9 +154,8 @@ function dashboard(){
      ${vc.length?`<div class="small" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">${vc.map(([id,v])=>`<span>${cat(id).icone} ${esc(cat(id).nome)} <b class="num" style="color:var(--t1);font-weight:500">${fmt(v)}</b></span>`).join('')}</div>`:''}
      ${noMes&&diasRest>0&&r.saldoVA>0?`<p class="small" style="margin-top:8px">Dá para gastar <b style="color:var(--va)">${brl(r.saldoVA/diasRest)}</b> por dia no VA</p>`:''}</div>`})():''}
    <div class="card c5"><div class="card-h"><h2>Orçamentos</h2><button class="link" data-go="categorias">Editar</button></div>${bars}</div>
-   ${S.metas.length?`<div class="card c12"><div class="card-h"><h2>Metas</h2><button class="link" data-go="metas">Ver todas</button></div><div class="grid">${S.metas.slice(0,3).map(x=>{const t=metaTotal(x),p=Math.min(t/x.alvo*100,100);return `<div class="c4" style="min-width:0"><div class="l small" style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.icone} ${esc(x.nome)}</span><span class="num">${p.toFixed(0)}%</span></div><div class="bar"><i style="width:${p}%;background:${p>=100?'var(--pos)':'var(--accent)'}"></i></div></div>`}).join('')}</div></div>`:''}
-   <div class="card c7"><div class="card-h"><h2>Últimos lançamentos</h2><button class="link" data-go="lancamentos">Ver todos</button></div>
-    ${r.G.length?r.G.slice(0,7).map(gItem).join(''):`<div class="empty" style="padding:16px">Sem gastos neste mês. <button class="link" data-new="gasto">Lançar gasto</button></div>`}</div>
+   <div class="card c7"><div class="card-h"><h2>Últimos gastos</h2><button class="link" data-go="lancamentos">Ver todos</button></div>
+    ${rF.length?rF.slice(0,7).map(gItem).join(''):`<div class="empty" style="padding:16px">Sem gastos neste mês. <button class="link" data-new="gasto">Lançar gasto</button></div>`}</div>
   </div>`;
 }
 function budgetRow({c,v}){
