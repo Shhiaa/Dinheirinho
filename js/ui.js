@@ -18,7 +18,7 @@ function gastoForm(g){
   openModal(mh(novo?'Novo gasto':'Editar gasto')+`
    <div style="text-align:center;margin-bottom:20px"><div class="cap">Valor${g.parcelas>1?' total':''}</div><div style="display:flex;align-items:baseline;justify-content:center;gap:6px"><span style="color:var(--t2);font-size:20px">R$</span><input class="amount-inp" id="gVal" inputmode="numeric" placeholder="0,00" value="${maskVal(g.valor)}" autofocus style="width:auto;max-width:260px"></div></div>
    <div class="field"><label>Pago com</label><div class="seg" id="gOrig"><button data-o="conta" class="${g.carteira!=='va'?'on':''}">Conta</button><button data-o="va" class="va ${g.carteira==='va'?'on':''}">VA</button></div></div>
-   <div class="field"><label>Categoria</label><div class="chips" id="gCats">${S.categorias.map(c=>`<button class="chip ${g.categoria===c.id?'on':''}" data-c="${c.id}"><span style="color:${c.cor}">${c.icone}</span>${esc(c.nome)}</button>`).join('')}</div></div>
+   <div class="field"><label>Categoria</label><select class="inp" id="gCat">${S.categorias.map(c=>`<option value="${c.id}" ${g.categoria===c.id?'selected':''}>${c.icone} ${esc(c.nome)}</option>`).join('')}</select></div>
    <div class="row"><div class="field"><label>Data</label><input class="inp" type="date" id="gData" value="${g.data}"></div>
    <div class="field"><label>Parcelas</label><input class="inp num" type="number" min="1" max="48" id="gParc" value="${g.parcelas||1}"></div></div>
    <div class="field"><label>Descrição (opcional)</label><input class="inp" id="gDesc" value="${esc(g.descricao)}" placeholder="Ex.: Feira, Uber, Netflix"></div>
@@ -29,15 +29,15 @@ function gastoForm(g){
   vi.addEventListener('input',()=>{const v=parseVal(vi.value);vi.value=maskVal(v)});
   // VA sugere Mercado
   document.getElementById('gOrig').onclick=e=>{const b=e.target.closest('[data-o]');if(!b)return;_gf.carteira=b.dataset.o;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
-    if(_gf.carteira==='va'){const m=S.categorias.find(c=>/mercado/i.test(c.nome));if(m){_gf.categoria=m.id;document.querySelectorAll('#gCats .chip').forEach(x=>x.classList.toggle('on',x.dataset.c===m.id))}}};
-  document.getElementById('gCats').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;_gf.categoria=b.dataset.c;document.querySelectorAll('#gCats .chip').forEach(x=>x.classList.toggle('on',x===b))};
+    if(_gf.carteira==='va'){const m=S.categorias.find(c=>/mercado/i.test(c.nome));if(m){_gf.categoria=m.id;document.getElementById('gCat').value=m.id}}};
+  document.getElementById('gCat').onchange=e=>{_gf.categoria=e.target.value};
 }
 function saveGasto(id){
   const valor=parseVal(document.getElementById('gVal').value);
   if(!valor){document.getElementById('gVal').focus();toast('Informe o valor');return}
   const data=document.getElementById('gData').value||today();
   const parc=Math.max(1,parseInt(document.getElementById('gParc').value)||1);
-  const g={id:id||uid(),valor,categoria:_gf.categoria,carteira:_gf.carteira,data,descricao:document.getElementById('gDesc').value.trim(),recorrente:document.getElementById('gRec').checked&&parc===1,parcelas:parc};
+  const g={id:id||uid(),valor,categoria:document.getElementById('gCat').value,carteira:_gf.carteira,data,descricao:document.getElementById('gDesc').value.trim(),recorrente:document.getElementById('gRec').checked&&parc===1,parcelas:parc};
   const prev=JSON.stringify(S);
   if(id){const i=S.gastos.findIndex(x=>x.id===id);const enc=document.getElementById('gEnc');
     S.gastos[i]={...S.gastos[i],...g};

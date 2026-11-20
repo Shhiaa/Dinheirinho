@@ -3,7 +3,7 @@ const NAV=[['dashboard','Dashboard','home'],['lancamentos','Gastos','list'],['re
 function renderNav(){
   document.getElementById('side').innerHTML=`<div class="brand"><i></i>Finanças</div>`+
     NAV.map(([k,t,ic])=>`<button class="nav-btn ${view===k?'on':''}" data-go="${k}">${I[ic]}${t}</button>`).join('')+
-    `<button class="btn pri" data-new="gasto">${I.plus}Novo lançamento</button><div style="margin-top:auto;padding:0 12px">${syncBadge()}</div>`;
+    `<div style="margin-top:auto;padding:0 12px">${syncBadge()}</div>`;
   const mob=[['dashboard','Início','home'],['lancamentos','Gastos','list'],null,['rendas','Rendas','wallet'],['mais','Mais','cog']];
   document.getElementById('bnav').innerHTML=mob.map(x=>x?`<button class="nav-btn ${(view===x[0]||(x[0]==='mais'&&['categorias','metas','investimentos','relatorios','config'].includes(view)))?'on':''}" data-go="${x[0]}">${I[x[2]]}${x[1]}</button>`:`<button class="plus" data-new="gasto" aria-label="Novo lançamento">${I.plus}</button>`).join('');
 }
@@ -67,7 +67,7 @@ function dashAno(){
   const tx=entC?saldo/entC*100:0;
   const tabela=`<table class="tbl num"><tr><th>Mês</th><th class="r">Entradas</th><th class="r">Gastos</th><th class="r">Saldo</th></tr>${rs.map(x=>`<tr style="${x.futuro?'opacity:.35':''}"><td style="text-transform:capitalize"><button class="link" style="color:var(--t1);font-size:14px" data-vermes="${x.m}">${lbl(x.m)}</button></td><td class="r">${x.ent?fmt(x.ent):'—'}</td><td class="r">${gx(x)?fmt(gx(x)):'—'}</td><td class="r" style="color:${x.saldo<0?'var(--neg)':'var(--t1)'}">${x.ent||x.gastos?fmt(x.saldo):'—'}</td></tr>`).join('')}<tr style="font-weight:600"><td>Total</td><td class="r">${fmt(ent)}</td><td class="r">${fmt(gas)}</td><td class="r" style="color:${saldo<0?'var(--neg)':'var(--pos)'}">${fmt(saldo)}</td></tr></table>`;
   return head+`<div class="grid">
-   <div class="card stat c3"><div class="cap">Entradas · salário</div><div class="val">${money(ent)}</div><span class="small">média ${brl(ent/nM)}/mês</span></div>
+   <div class="card stat c3"><div class="cap">Entradas · salário</div><div class="val" style="color:var(--pos)">${money(ent)}</div></div>
    <div class="card stat c3"><div class="cap">${fc?'Gastos · '+esc(cat(fc).nome):'Gastos · salário'}</div><div class="val" style="color:var(--neg)">${money(gas)}</div></div>
    <div class="card stat c3"><div class="cap">${sempre?'Sobrou no total':'Sobrou no ano'}</div><div class="val" style="color:${saldo<0?'var(--neg)':'var(--t1)'}">${money(saldo)}</div></div>
    <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">${sempre?'VA no total':'VA no ano'}</div><div class="val">${money(sum('gVA'))}</div></div>
@@ -96,10 +96,10 @@ function dashboard(){
   const porDia=noMes&&diasRest>0?r.saldo/diasRest:null;
 
   const cards=`
-   <div class="card stat c3"><div class="cap">Entradas · salário</div><div class="val">${money(r.ent)}</div>${delta(r.ent,p.ent)}</div>
+   <div class="card stat c3"><div class="cap">Entradas · salário</div><div class="val" style="color:var(--pos)">${money(r.ent)}</div></div>
    <div class="card stat c3"><div class="cap">${fc?'Gastos · '+esc(cat(fc).nome):'Gastos · salário'}</div><div class="val" style="color:var(--neg)">${money(fc?r.G.filter(g=>g.carteira!=='va'&&g.categoria===fc).reduce((t,g)=>t+g.valor,0):r.gastos)}</div></div>
-   <div class="card stat c3"><div class="cap">Saldo disponível</div><div class="val" style="color:${r.saldo<0?'var(--neg)':'var(--t1)'}">${money(r.saldo)}</div><span class="small">Conta: entradas − gastos${r.guardado?' − guardado':''}${r.investido?' − investido':''}</span></div>
-   <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">Saldo do VA</div><div class="val">${money(r.saldoVA)}</div><span class="small">gastou ${brl(r.gVA)} de ${brl(r.entVA)}</span></div>`;
+   <div class="card stat c3"><div class="cap">Saldo disponível</div><div class="val" style="color:${r.saldo<0?'var(--neg)':'var(--t1)'}">${money(r.saldo)}</div></div>
+   <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">Saldo do VA</div><div class="val">${money(r.saldoVA)}</div></div>`;
 
   if(semDados)return `<div class="top"><h1>Visão geral</h1><div class="ctl"><div class="cg">${monthPicker()}${modoToggle()}</div></div></div>
    <div class="grid">${cards}<div class="card c12 empty"><h2>Comece cadastrando sua renda</h2><p class="hint">Salário e VA entram sozinhos todo mês. Depois é só lançar os gastos pelo botão “+”.</p>
@@ -167,7 +167,7 @@ function gItem(g){
   const extra=g.parcelas>1?` · ${g.parcela}/${g.parcelas}`:g.recorrente?' · fixo':'';
   return `<div class="item"><div class="dot" style="background:${c.cor}22;color:${c.cor}">${c.icone}</div>
    <div class="meta"><b>${esc(g.descricao||c.nome)}${g.carteira==='va'?'<span class="tag">VA</span>':''}</b><span class="small">${esc(c.nome)} · ${dataBR(g.data)}${extra}</span></div>
-   <span class="amt num" style="color:${g.carteira==='va'?'var(--va)':'var(--t1)'}">−${fmt(g.valor)}</span>
+   <span class="amt num" style="color:${g.carteira==='va'?'var(--va)':'var(--neg)'}">−${fmt(g.valor)}</span>
    <div class="acts"><button class="icon-btn" data-edit-g="${g.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-dup-g="${g.id}" aria-label="Duplicar">${I.copy}</button><button class="icon-btn" data-del-g="${g.id}" aria-label="Excluir">${I.trash}</button></div></div>`;
 }
 function rItem(r){
@@ -272,7 +272,7 @@ function relatorios(){
   <div class="grid">
    <div class="card stat c4"><div class="cap">Entradas · salário</div><div class="val">${money(rs.reduce((s,x)=>s+x.ent,0))}</div></div>
    <div class="card stat c4"><div class="cap">Gastos · salário</div><div class="val">${money(rs.reduce((s,x)=>s+x.gastos,0))}</div></div>
-   <div class="card stat c4"><div class="cap">Taxa de poupança</div><div class="val num">${totE?(totS/totE*100).toFixed(0)+'%':'—'}</div><span class="small">do salário que sobrou</span></div>
+   <div class="card stat c4"><div class="cap">Taxa de poupança</div><div class="val num">${totE?(totS/totE*100).toFixed(0)+'%':'—'}</div></div>
    <div class="card c12"><div class="card-h"><h2>Entradas × gastos</h2><span class="small"><span style="color:var(--pos)">■</span> entradas &nbsp;<span style="color:var(--neg)">■</span> gastos</span></div>
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="200" preserveAspectRatio="none">${bars}</svg><div class="small" style="display:flex;margin-top:8px;text-transform:capitalize">${labels}</div></div>
    <div class="card c12" style="overflow-x:auto"><h2 style="margin-bottom:8px">Por mês</h2>${tbl}</div>
