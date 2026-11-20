@@ -30,6 +30,7 @@ function delta(cur,prev,invert){
 let dashModo='mes';
 const modoToggle=()=>`<div class="seg" style="width:150px"><button class="${dashModo==='mes'?'on':''}" data-modo="mes">Mês</button><button class="${dashModo==='ano'?'on':''}" data-modo="ano">Ano</button></div>`;
 const anoPicker=()=>`<div class="month"><button class="icon-btn" data-ano="-1" aria-label="Ano anterior">${I.l}</button><span>${mes.slice(0,4)}</span><button class="icon-btn" data-ano="1" aria-label="Próximo ano">${I.r}</button></div>`;
+const barraSvg=(x,y,w,h,cor,hx,hw,H,tip,op)=>`<g class="bg"${op!=null?` opacity="${op}"`:''}><rect class="b" x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${cor}"/><rect class="hit" x="${hx}" y="0" width="${hw}" height="${H}" fill="transparent" ${tip}/></g>`;
 function dashAno(){
   const y=mes.slice(0,4),hojeM=ym(today());
   const meses=Array.from({length:12},(_,i)=>`${y}-${String(i+1).padStart(2,'0')}`);
@@ -42,12 +43,13 @@ function dashAno(){
   if(!passados.some(x=>x.ent||x.gastos))return head+`<div class="card empty"><h2>Sem lançamentos em ${y}</h2></div>`;
   // barras por mês
   const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,x.gastos)));const W=720,H=180,bw=W/12*0.3;
-  const bars=rs.map((x,i)=>{const cx=(i+.5)*W/12;const o=x.futuro?.25:1;return `<g opacity="${o}"><rect x="${cx-bw-1}" y="${H-x.ent/maxV*H}" width="${bw}" height="${x.ent/maxV*H}" rx="3" fill="#22C55E"><title>${mesCurto(x.m)} · entradas ${brl(x.ent)}</title></rect><rect x="${cx+1}" y="${H-x.gastos/maxV*H}" width="${bw}" height="${x.gastos/maxV*H}" rx="3" fill="#F04444"><title>${mesCurto(x.m)} · gastos ${brl(x.gastos)}</title></rect></g>`}).join('');
+  const bars=rs.map((x,i)=>{const cx=(i+.5)*W/12,o=x.futuro?.25:1;
+    return barraSvg(cx-bw-1,H-x.ent/maxV*H,bw,x.ent/maxV*H,'#22C55E',cx-W/12/2,W/12/2,H,dtip(brl(x.ent)),o)+barraSvg(cx+1,H-x.gastos/maxV*H,bw,x.gastos/maxV*H,'#F04444',cx,W/12/2,H,dtip(brl(x.gastos)),o)}).join('');
   // categorias do ano
   const porCat={};passados.forEach(x=>x.G.filter(g=>g.carteira!=='va').forEach(g=>porCat[g.categoria]=(porCat[g.categoria]||0)+g.valor));
   const cats=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
   let acc=0;const R=60,C=2*Math.PI*R;
-  const donut=cats.length?`<div class="donut-wrap"><svg width="160" height="160" viewBox="0 0 160 160"><circle r="${R}" cx="80" cy="80" fill="none" stroke="#262626" stroke-width="18"/>${cats.map(([id,v])=>{const c=cat(id),len=v/gas*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" stroke-width="18" stroke-dasharray="${Math.max(len-2,.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)"><title>${esc(c.nome)}: ${brl(v)}</title></circle>`;acc+=len;return s}).join('')}<text x="80" y="76" text-anchor="middle" fill="#A1A1A1" font-size="11">TOTAL</text><text x="80" y="96" text-anchor="middle" fill="#FAFAFA" font-size="15" font-weight="600">${fmt(gas)}</text></svg>
+  const donut=cats.length?`<div class="donut-wrap"><svg width="160" height="160" viewBox="0 0 160 160"><circle r="${R}" cx="80" cy="80" fill="none" stroke="#262626" stroke-width="18"/>${cats.map(([id,v])=>{const c=cat(id),len=v/gas*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" stroke-width="18" stroke-dasharray="${Math.max(len-2,.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)" ${dtip(c.nome,brl(v)+' · '+(v/gas*100).toFixed(1)+'%')}/>`;acc+=len;return s}).join('')}<text x="80" y="76" text-anchor="middle" fill="#A1A1A1" font-size="11">TOTAL</text><text x="80" y="96" text-anchor="middle" fill="#FAFAFA" font-size="15" font-weight="600">${fmt(gas)}</text></svg>
    <div class="legend">${cats.slice(0,8).map(([id,v])=>{const c=cat(id);return `<div><i style="background:${c.cor}"></i><span>${esc(c.nome)}</span><span class="num">${fmt(v)}</span></div>`}).join('')}</div></div>`:'<div class="empty">Sem gastos.</div>';
   const maiorMes=passados.reduce((a,b)=>b.gastos>a.gastos?b:a);
   const tx=entC?saldo/entC*100:0;
@@ -99,7 +101,7 @@ function dashboard(){
   if(!cats.length)donut=`<div class="empty">Nenhum gasto neste mês.</div>`;
   else{
     let acc=0;const R=60,C=2*Math.PI*R;
-    const segs=cats.map(([id,v])=>{const c=cat(id);const len=v/total*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" stroke-width="18" stroke-dasharray="${Math.max(len-2,0.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)"><title>${esc(c.nome)}: ${brl(v)}</title></circle>`;acc+=len;return s}).join('');
+    const segs=cats.map(([id,v])=>{const c=cat(id);const len=v/total*C;const s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${c.cor}" stroke-width="18" stroke-dasharray="${Math.max(len-2,0.5)} ${C}" stroke-dashoffset="${-acc}" transform="rotate(-90 80 80)" ${dtip(c.nome,brl(v)+' · '+(v/total*100).toFixed(1)+'%')}/>`;acc+=len;return s}).join('');
     donut=`<div class="donut-wrap"><svg width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Gastos por categoria"><circle r="${R}" cx="80" cy="80" fill="none" stroke="#262626" stroke-width="18"/>${segs}<text x="80" y="76" text-anchor="middle" fill="#A1A1A1" font-size="11" letter-spacing=".5">TOTAL</text><text x="80" y="96" text-anchor="middle" fill="#FAFAFA" font-size="16" font-weight="600" class="num">${fmt(total)}</text></svg>
     <div class="legend">${cats.slice(0,7).map(([id,v])=>{const c=cat(id);return `<div><i style="background:${c.cor}"></i><span>${esc(c.nome)}</span><span class="num">${(v/total*100).toFixed(0)}%</span></div>`}).join('')}</div></div>`;
   }
@@ -112,7 +114,8 @@ function dashboard(){
   const maxY=Math.max(r.entConta,a,1);
   const X=i=>pad+i/(fimMes-1)*(W-2*pad),Y=v=>H-pad-v/maxY*(H-2*pad);
   const pts=cum.slice(0,limite).map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
-  const linha=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="Gasto acumulado por dia">
+  chartLine={W,H,pad,fim:fimMes,cum,limite,ideal:r.entConta,maxY};
+  const linha=`<svg data-linechart viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="Gasto acumulado por dia">
    <line x1="${X(0)}" y1="${Y(0)}" x2="${X(fimMes-1)}" y2="${Y(r.entConta)}" stroke="#6B6B6B" stroke-dasharray="4 4" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
    ${limite?`<polyline points="${pts}" fill="none" stroke="#C6F432" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`:''}</svg>
    <div class="small" style="display:flex;justify-content:space-between;margin-top:8px"><span>dia 1</span><span><span style="color:var(--accent)">━</span> gasto acumulado &nbsp; <span class="muted">┅</span> ritmo ideal</span><span>dia ${fimMes}</span></div>`;
@@ -213,7 +216,8 @@ function relatorios(){
   const rs=meses.map(m=>({m,...resumo(m)}));
   const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,x.gastos)));
   const W=600,H=200,bw=(W/n)*0.32;
-  const bars=rs.map((x,i)=>{const cx=(i+.5)*W/n;return `<rect x="${cx-bw-2}" y="${H-x.ent/maxV*H}" width="${bw}" height="${x.ent/maxV*H}" rx="3" fill="#22C55E"><title>Entradas ${brl(x.ent)}</title></rect><rect x="${cx+2}" y="${H-x.gastos/maxV*H}" width="${bw}" height="${x.gastos/maxV*H}" rx="3" fill="#F04444"><title>Gastos ${brl(x.gastos)}</title></rect>`}).join('');
+  const bars=rs.map((x,i)=>{const cx=(i+.5)*W/n;
+    return barraSvg(cx-bw-2,H-x.ent/maxV*H,bw,x.ent/maxV*H,'#22C55E',cx-W/n/2,W/n/2,H,dtip(brl(x.ent)))+barraSvg(cx+2,H-x.gastos/maxV*H,bw,x.gastos/maxV*H,'#F04444',cx,W/n/2,H,dtip(brl(x.gastos)))}).join('');
   const labels=rs.map(x=>`<span style="flex:1;text-align:center">${mesCurto(x.m)}</span>`).join('');
   const tbl=`<table class="tbl num"><tr><th>Mês</th><th class="r">Entradas</th><th class="r">Gastos</th><th class="r">Saldo</th><th class="r">Poupança</th></tr>${rs.slice().reverse().map(x=>{const tx=x.entConta?x.saldo/x.entConta*100:0;return `<tr><td style="text-transform:capitalize">${mesCurto(x.m)}/${x.m.slice(2,4)}</td><td class="r">${fmt(x.ent)}</td><td class="r">${fmt(x.gastos)}</td><td class="r" style="color:${x.saldo<0?'var(--neg)':'var(--t1)'}">${fmt(x.saldo)}</td><td class="r" style="color:${tx<0?'var(--neg)':tx>=20?'var(--pos)':'var(--t2)'}">${x.entConta?tx.toFixed(0)+'%':'—'}</td></tr>`}).join('')}</table>`;
   // categorias no tempo
