@@ -205,9 +205,10 @@ function fixoRow(g){
    <div class="acts"><button class="icon-btn" data-edit-g="${g.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-del-g="${g.id}" aria-label="Excluir">${I.trash}</button></div></div>`;
 }
 function rendaRow(r){
+  const ini=r.recorrente?S.rendas.filter(x=>x.recorrente&&x.tipo===r.tipo&&x.descricao===r.descricao&&x.carteira===r.carteira&&(x===r||x.oculta)).map(x=>x.inicio).reduce((a,b)=>b<a?b:a,r.inicio):'';
   return `<div class="item"><div class="dot" style="background:${r.carteira==='va'?'rgba(139,124,246,.15)':'rgba(34,197,94,.12)'};color:${r.carteira==='va'?'var(--va)':'var(--pos)'}">${r.carteira==='va'?'🍎':'＋'}</div>
-   <div class="meta"><b>${esc(r.descricao)}${r.carteira==='va'?'<span class="tag">VA</span>':''}</b><span class="small">${r.recorrente?`Todo dia ${r.dia} · desde ${mesCurto(r.inicio)}/${r.inicio.slice(2,4)}${r.fim?` · até ${mesCurto(r.fim)}/${r.fim.slice(2,4)}`:''}`:dataBR(r.data)+'/'+r.data.slice(2,4)}</span>
-   ${r.historico&&r.historico.length?`<span class="small muted">Reajustes: ${r.historico.map(h=>`${mesCurto(h.mes)}/${h.mes.slice(2,4)} ${brl(h.de)}→${brl(h.para)}`).join(' · ')}</span>`:''}</div>
+   <div class="meta"><b>${esc(r.descricao)}${r.carteira==='va'?'<span class="tag">VA</span>':''}</b><span class="small">${r.recorrente?`Todo dia ${r.dia} · desde ${mesCurto(ini)}/${ini.slice(2,4)}${r.fim?` · até ${mesCurto(r.fim)}/${r.fim.slice(2,4)}`:''}`:dataBR(r.data)+'/'+r.data.slice(2,4)}</span>
+   ${r.historico&&r.historico.length?(()=>{const h=r.historico,u=h[h.length-1];return `<details style="margin-top:4px"><summary class="small muted" style="cursor:pointer">${h.length} reajuste${h.length>1?'s':''} · último em ${mesCurto(u.mes)}/${u.mes.slice(2,4)}: ${brl(u.para)}</summary>${h.map(x=>`<div class="small num muted" style="padding:2px 0">${mesCurto(x.mes)}/${x.mes.slice(2,4)} · ${brl(x.de)} → ${brl(x.para)}</div>`).join('')}</details>`})():''}</div>
    <span class="amt num" style="color:var(--pos)">+${fmt(r.valor)}</span>
    <div class="acts"><button class="icon-btn" data-edit-r="${r.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-del-r="${r.id}" aria-label="Excluir">${I.trash}</button></div></div>`;
 }
@@ -224,7 +225,7 @@ function lancamentos(){
 }
 function rendas(){
   const mp=mesesDoPeriodo(),per=new Set(mp),rs=mp.map(resumo);
-  const rec=S.rendas.filter(r=>r.recorrente),ativos=rec.filter(r=>!r.fim);
+  const rec=S.rendas.filter(r=>r.recorrente&&!r.oculta),ativos=rec.filter(r=>!r.fim);
   return telaFluxo({tipo:'renda',titulo:'Rendas',novo:'Nova renda',
     cards:[['Renda fixa mensal (Conta)',money(ativos.filter(r=>r.carteira!=='va').reduce((t,r)=>t+r.valor,0))],
       ['Benefícios mensais',money(ativos.filter(r=>r.carteira==='va').reduce((t,r)=>t+r.valor,0)),'var(--va)','Só pagam alimentação — saldo separado'],

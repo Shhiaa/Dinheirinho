@@ -23,6 +23,7 @@ function gastoForm(g){
    <div class="field"><label>Parcelas</label><input class="inp num" type="number" min="1" max="48" id="gParc" value="${g.parcelas||1}"></div></div>
    <div class="field"><label>Descrição (opcional)</label><input class="inp" id="gDesc" value="${esc(g.descricao)}" placeholder="Ex.: Feira, Uber, Netflix"></div>
    <label style="display:flex;gap:8px;align-items:center;margin-bottom:20px;cursor:pointer" class="small"><input type="checkbox" id="gRec" ${g.recorrente?'checked':''}> Gasto fixo — repetir todo mês</label>
+   ${g.recorrente&&g.fim?`<label style="display:flex;gap:8px;align-items:center;margin:-8px 0 20px;cursor:pointer;color:var(--warn)" class="small"><input type="checkbox" id="gEnc" checked> Encerrado em ${mesCurto(g.fim)}/${g.fim.slice(2,4)} — desmarque para voltar a repetir todo mês</label>`:''}
    <button class="btn pri" style="width:100%" data-saveg="${g.id||''}">${novo?'Adicionar gasto':'Salvar'}</button>`);
   const vi=document.getElementById('gVal');
   vi.addEventListener('input',()=>{const v=parseVal(vi.value);vi.value=maskVal(v)});
@@ -38,7 +39,10 @@ function saveGasto(id){
   const parc=Math.max(1,parseInt(document.getElementById('gParc').value)||1);
   const g={id:id||uid(),valor,categoria:_gf.categoria,carteira:_gf.carteira,data,descricao:document.getElementById('gDesc').value.trim(),recorrente:document.getElementById('gRec').checked&&parc===1,parcelas:parc};
   const prev=JSON.stringify(S);
-  if(id){const i=S.gastos.findIndex(x=>x.id===id);S.gastos[i]={...S.gastos[i],...g}}else S.gastos.push(g);
+  if(id){const i=S.gastos.findIndex(x=>x.id===id);const enc=document.getElementById('gEnc');
+    S.gastos[i]={...S.gastos[i],...g};
+    // só continua encerrado se ainda é fixo e a caixa "Encerrado" segue marcada
+    if(!g.recorrente||(enc&&!enc.checked))delete S.gastos[i].fim}else S.gastos.push(g);
   save();closeModal();mes=ym(data);render();toast(id?'Gasto atualizado':`Gasto de ${brl(valor)} adicionado`,prev);
 }
 
