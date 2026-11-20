@@ -43,6 +43,9 @@ h2{font-size:20px;line-height:28px;font-weight:600}
 .btn.sec{background:var(--surface);border-color:var(--border)}.btn.sec:hover{background:var(--elev)}
 .btn.ghost{background:none;color:var(--t2)}.btn.ghost:hover{color:var(--t1);background:var(--elev)}
 .btn.danger{background:none;border-color:#4a1d1d;color:var(--neg)}
+.btn.cat{white-space:nowrap;background:linear-gradient(135deg,rgba(139,124,246,.30),rgba(139,124,246,.12));border-color:rgba(139,124,246,.55);color:#C4BBFF}
+.btn.cat:hover{filter:brightness(1.2);box-shadow:0 0 18px rgba(139,124,246,.25)}
+.btn.cat svg{width:18px;height:18px;flex:none}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* list */
 .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}

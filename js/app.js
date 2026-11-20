@@ -4,6 +4,9 @@ document.addEventListener('click',e=>{
   if(d.close!==undefined&&!d.go)closeModal();
   if(d.go){if(d.close!==undefined)closeModal();go(d.go)}
   else if(d.new==='gasto')gastoForm();
+  else if(d.categorizar!==undefined){catPular=new Set();categorizar()}
+  else if(d.ctsalvar!==undefined)ctSalvar();
+  else if(d.ctpular!==undefined)ctPular();
   else if(d.new==='renda')rendaForm();
   else if(d.new==='categoria')catForm();
   else if(d.new==='meta')metaForm();

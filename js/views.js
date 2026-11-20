@@ -184,7 +184,7 @@ function telaFluxo(c){
   const q=filt.q.toLowerCase();
   const itens=a.itens.filter(x=>(!filt.orig||(x.carteira==='va'?'va':'conta')===filt.orig)&&(c.tipo!=='gasto'||!filt.cat||x.categoria===filt.cat)&&(!q||(x.descricao||'').toLowerCase().includes(q)||(c.tipo==='gasto'&&cat(x.categoria).nome.toLowerCase().includes(q))||fmt(x.valor).includes(q))).sort((x,y)=>y.data.localeCompare(x.data));
   const total=itens.reduce((t,x)=>t+x.valor,0)*a.sinal;
-  return `<div class="top"><h1>${c.titulo}</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}<button class="btn pri" data-new="${c.tipo}">${I.plus}${c.novo}</button></div></div>
+  return `<div class="top"><h1>${c.titulo}</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}${c.extra||''}<button class="btn pri" data-new="${c.tipo}">${I.plus}${c.novo}</button></div></div>
   <div class="grid">
    ${c.cards.map(([cap,val,cor,sub])=>`<div class="card stat c4"><div class="cap"${cor&&cor.startsWith('var(--va')?` style="color:${cor}"`:''}>${cap}</div><div class="val"${cor&&!cor.startsWith('var(--va')?` style="color:${cor}"`:''}>${val}</div>${sub?`<span class="small">${sub}</span>`:''}</div>`).join('')}
    <div class="card c12"><div class="card-h"><h2>Recorrentes</h2><span class="small">${c.fixos.sub}</span></div>${c.fixos.itens.length?c.fixos.itens.map(c.fixos.row).join(''):`<div class="empty">${c.fixos.vazio}<br><button class="btn pri" data-new="${c.tipo}">Cadastrar</button></div>`}</div>
@@ -216,7 +216,7 @@ function lancamentos(){
   const mp=mesesDoPeriodo(),rs=mp.map(resumo);
   const fx=S.gastos.filter(g=>g.recorrente&&!(g.parcelas>1)).sort((a,b)=>(!a.fim)-(!b.fim)||b.valor-a.valor);
   const ativos=fx.filter(g=>!g.fim);
-  return telaFluxo({tipo:'gasto',titulo:'Gastos',novo:'Novo gasto',
+  return telaFluxo({tipo:'gasto',titulo:'Gastos',novo:'Novo gasto',extra:qtdOutros()?`<button class="btn cat" data-categorizar>${I.tag}Categorizar (${qtdOutros()})</button>`:'',
     cards:[['Gasto fixo mensal (Conta)',money(ativos.filter(g=>g.carteira!=='va').reduce((t,g)=>t+g.valor,0))],
       ['Fixos no VA',money(ativos.filter(g=>g.carteira==='va').reduce((t,g)=>t+g.valor,0)),'var(--va)','Descontam do saldo do VA'],
       ['Gasto no período (Conta)',money(rs.reduce((t,x)=>t+x.gConta,0)),'var(--neg)']],
