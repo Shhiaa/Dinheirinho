@@ -1,10 +1,10 @@
 /* ---------- navegação ---------- */
-const NAV=[['dashboard','Dashboard','home'],['lancamentos','Lançamentos','list'],['rendas','Rendas','wallet'],['categorias','Categorias','tag'],['metas','Metas','target'],['investimentos','Investimentos','trend'],['relatorios','Relatórios','chart'],['config','Configurações','cog']];
+const NAV=[['dashboard','Dashboard','home'],['lancamentos','Gastos','list'],['rendas','Rendas','wallet'],['categorias','Categorias','tag'],['metas','Metas','target'],['investimentos','Investimentos','trend'],['relatorios','Relatórios','chart'],['config','Configurações','cog']];
 function renderNav(){
   document.getElementById('side').innerHTML=`<div class="brand"><i></i>Finanças</div>`+
     NAV.map(([k,t,ic])=>`<button class="nav-btn ${view===k?'on':''}" data-go="${k}">${I[ic]}${t}</button>`).join('')+
     `<button class="btn pri" data-new="gasto">${I.plus}Novo lançamento</button><div style="margin-top:auto;padding:0 12px">${syncBadge()}</div>`;
-  const mob=[['dashboard','Início','home'],['lancamentos','Lançamentos','list'],null,['rendas','Rendas','wallet'],['mais','Mais','cog']];
+  const mob=[['dashboard','Início','home'],['lancamentos','Gastos','list'],null,['rendas','Rendas','wallet'],['mais','Mais','cog']];
   document.getElementById('bnav').innerHTML=mob.map(x=>x?`<button class="nav-btn ${(view===x[0]||(x[0]==='mais'&&['categorias','metas','investimentos','relatorios','config'].includes(view)))?'on':''}" data-go="${x[0]}">${I[x[2]]}${x[1]}</button>`:`<button class="plus" data-new="gasto" aria-label="Novo lançamento">${I.plus}</button>`).join('');
 }
 function go(v){
@@ -172,49 +172,74 @@ function rItem(r){
    <div class="acts"><button class="icon-btn" data-edit-r="${r.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-del-r="${r.id}" aria-label="Excluir">${I.trash}</button></div></div>`;
 }
 
-function lancamentos(){
-  const r=resumo(mes);
-  let items=[...r.G.map(g=>({...g,_t:'g'})),...r.R.map(x=>({...x,_t:'r'}))];
+// meses cobertos pelo período escolhido (mesmo seletor do dashboard: Mês / Ano / Sempre)
+function mesesDoPeriodo(){
+  if(dashModo==='ano'){const y=mes.slice(0,4),hoje=ym(today());return Array.from({length:12},(_,i)=>`${y}-${String(i+1).padStart(2,'0')}`).filter(m=>m<=hoje)}
+  if(dashModo==='sempre'){const out=[];for(let m=primeiroMes();m<=ym(today());m=addM(m,1))out.push(m);return out}
+  return [mes];
+}
+// Gastos e Rendas usam a mesma tela; só mudam textos, dados e cores
+function telaFluxo(c){
+  const a=c.avulsos,tot=a.itens.reduce((t,x)=>t+x.valor,0)*a.sinal;
   const q=filt.q.toLowerCase();
-  items=items.filter(x=>(!filt.tipo||x._t===filt.tipo)&&(!filt.orig||(x.carteira==='va'?'va':'conta')===filt.orig)&&(!filt.cat||x.categoria===filt.cat)&&(!q||(x.descricao||'').toLowerCase().includes(q)||(x._t==='g'&&cat(x.categoria).nome.toLowerCase().includes(q))||fmt(x.valor).includes(q)));
-  items.sort((a,b)=>b.data.localeCompare(a.data));
-  const tot=items.reduce((s,x)=>s+(x._t==='r'?x.valor:-x.valor),0);
-  return `<div class="top"><h1>Lançamentos</h1>${monthPicker()}</div>
-  <div class="filters">
-   <input class="inp" id="fq" placeholder="Buscar descrição, categoria ou valor" value="${esc(filt.q)}">
-   <select class="inp" id="ft"><option value="">Entradas e gastos</option><option value="g" ${filt.tipo==='g'?'selected':''}>Só gastos</option><option value="r" ${filt.tipo==='r'?'selected':''}>Só entradas</option></select>
-   <select class="inp" id="fc"><option value="">Todas as categorias</option>${S.categorias.map(c=>`<option value="${c.id}" ${filt.cat===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select>
-   <select class="inp" id="fo"><option value="">Conta e VA</option><option value="conta" ${filt.orig==='conta'?'selected':''}>Conta</option><option value="va" ${filt.orig==='va'?'selected':''}>VA</option></select>
-  </div>
-  <div class="card">
-   <div class="card-h"><span class="small">${items.length} lançamento${items.length===1?'':'s'}</span><span class="num" style="font-weight:600;color:${tot<0?'var(--neg)':'var(--pos)'}">${fmt(tot,true)}</span></div>
-   ${items.length?items.map(x=>x._t==='g'?gItem(x):rItem(x)).join(''):`<div class="empty">Nada encontrado.<br><button class="btn pri" data-new="gasto">${I.plus}Novo lançamento</button></div>`}
+  const itens=a.itens.filter(x=>(!filt.orig||(x.carteira==='va'?'va':'conta')===filt.orig)&&(c.tipo!=='gasto'||!filt.cat||x.categoria===filt.cat)&&(!q||(x.descricao||'').toLowerCase().includes(q)||(c.tipo==='gasto'&&cat(x.categoria).nome.toLowerCase().includes(q))||fmt(x.valor).includes(q))).sort((x,y)=>y.data.localeCompare(x.data));
+  const total=itens.reduce((t,x)=>t+x.valor,0)*a.sinal;
+  return `<div class="top"><h1>${c.titulo}</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}<button class="btn pri" data-new="${c.tipo}">${I.plus}${c.novo}</button></div></div>
+  <div class="grid">
+   ${c.cards.map(([cap,val,cor,sub])=>`<div class="card stat c4"><div class="cap"${cor&&cor.startsWith('var(--va')?` style="color:${cor}"`:''}>${cap}</div><div class="val"${cor&&!cor.startsWith('var(--va')?` style="color:${cor}"`:''}>${val}</div>${sub?`<span class="small">${sub}</span>`:''}</div>`).join('')}
+   <div class="card c12"><div class="card-h"><h2>Recorrentes</h2><span class="small">${c.fixos.sub}</span></div>${c.fixos.itens.length?c.fixos.itens.map(c.fixos.row).join(''):`<div class="empty">${c.fixos.vazio}<br><button class="btn pri" data-new="${c.tipo}">Cadastrar</button></div>`}</div>
+   <div class="card c12"><div class="card-h"><h2>${a.titulo}</h2><span class="small">${itens.length} ${itens.length===1?a.um:a.varios} · <b class="num" style="color:${a.cor}">${fmt(total,true)}</b></span></div>
+    <div class="filters" style="margin-bottom:8px">
+     <input class="inp" id="fq" placeholder="${a.busca}" value="${esc(filt.q)}">
+     ${c.tipo==='gasto'?`<select class="inp" id="fc"><option value="">Todas as categorias</option>${S.categorias.map(k=>`<option value="${k.id}" ${filt.cat===k.id?'selected':''}>${esc(k.nome)}</option>`).join('')}</select>`:''}
+     <select class="inp" id="fo"><option value="">Conta e VA</option><option value="conta" ${filt.orig==='conta'?'selected':''}>Conta</option><option value="va" ${filt.orig==='va'?'selected':''}>VA</option></select>
+    </div>
+    ${itens.length?itens.slice(0,300).map(a.row).join('')+(itens.length>300?`<p class="small" style="padding:12px 0 0">Mostrando os 300 mais recentes. Use os filtros ou um período menor para ver o resto.</p>`:''):`<div class="empty" style="padding:16px">${a.vazio}</div>`}</div>
   </div>`;
 }
-
-function rendas(){
-  const rec=S.rendas.filter(r=>r.recorrente),ext=S.rendas.filter(r=>!r.recorrente).sort((a,b)=>b.data.localeCompare(a.data));
-  const row=r=>`<div class="item"><div class="dot" style="background:${r.carteira==='va'?'rgba(139,124,246,.15)':'rgba(34,197,94,.12)'};color:${r.carteira==='va'?'var(--va)':'var(--pos)'}">${r.carteira==='va'?'🍎':'＋'}</div>
+function fixoRow(g){
+  const c=cat(g.categoria),d0=ym(g.data);
+  return `<div class="item"><div class="dot" style="background:${c.cor}22;color:${c.cor}">${c.icone}</div>
+   <div class="meta"><b>${esc(g.descricao||c.nome)}${g.carteira==='va'?'<span class="tag">VA</span>':''}</b><span class="small">${esc(c.nome)} · Todo dia ${+g.data.slice(8)} · desde ${mesCurto(d0)}/${d0.slice(2,4)}${g.fim?` · até ${mesCurto(g.fim)}/${g.fim.slice(2,4)}`:''}</span></div>
+   <span class="amt num" style="color:${g.carteira==='va'?'var(--va)':'var(--neg)'}">−${fmt(g.valor)}</span>
+   <div class="acts"><button class="icon-btn" data-edit-g="${g.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-del-g="${g.id}" aria-label="Excluir">${I.trash}</button></div></div>`;
+}
+function rendaRow(r){
+  return `<div class="item"><div class="dot" style="background:${r.carteira==='va'?'rgba(139,124,246,.15)':'rgba(34,197,94,.12)'};color:${r.carteira==='va'?'var(--va)':'var(--pos)'}">${r.carteira==='va'?'🍎':'＋'}</div>
    <div class="meta"><b>${esc(r.descricao)}${r.carteira==='va'?'<span class="tag">VA</span>':''}</b><span class="small">${r.recorrente?`Todo dia ${r.dia} · desde ${mesCurto(r.inicio)}/${r.inicio.slice(2,4)}${r.fim?` · até ${mesCurto(r.fim)}/${r.fim.slice(2,4)}`:''}`:dataBR(r.data)+'/'+r.data.slice(2,4)}</span>
    ${r.historico&&r.historico.length?`<span class="small muted">Reajustes: ${r.historico.map(h=>`${mesCurto(h.mes)}/${h.mes.slice(2,4)} ${brl(h.de)}→${brl(h.para)}`).join(' · ')}</span>`:''}</div>
    <span class="amt num" style="color:var(--pos)">+${fmt(r.valor)}</span>
    <div class="acts"><button class="icon-btn" data-edit-r="${r.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-del-r="${r.id}" aria-label="Excluir">${I.trash}</button></div></div>`;
-  const totRec=rec.filter(r=>!r.fim).reduce((s,r)=>s+(r.carteira==='va'?0:r.valor),0),totVA=rec.filter(r=>!r.fim&&r.carteira==='va').reduce((s,r)=>s+r.valor,0);
-  return `<div class="top"><h1>Rendas</h1><button class="btn pri" data-new="renda">${I.plus}Nova renda</button></div>
-  <div class="grid">
-   <div class="card stat c6"><div class="cap">Renda fixa mensal (Conta)</div><div class="val">${money(totRec)}</div></div>
-   <div class="card stat c6"><div class="cap" style="color:var(--va)">Benefícios mensais</div><div class="val">${money(totVA)}</div><span class="small">Só pagam alimentação — saldo separado</span></div>
-   <div class="card c12"><div class="card-h"><h2>Recorrentes</h2><span class="small">entram sozinhas todo mês</span></div>${rec.length?rec.map(row).join(''):`<div class="empty">Cadastre seu salário e VA.<br><button class="btn pri" data-new="renda">Cadastrar</button></div>`}</div>
-   <div class="card c12"><div class="card-h"><h2>Extras</h2><span class="small">freela, 13º, reembolso</span></div>${ext.length?ext.map(row).join(''):`<div class="empty" style="padding:16px">Nenhuma renda extra.</div>`}</div>
-  </div>`;
+}
+function lancamentos(){
+  const mp=mesesDoPeriodo(),rs=mp.map(resumo);
+  const fx=S.gastos.filter(g=>g.recorrente&&!(g.parcelas>1)).sort((a,b)=>(!a.fim)-(!b.fim)||b.valor-a.valor);
+  const ativos=fx.filter(g=>!g.fim);
+  return telaFluxo({tipo:'gasto',titulo:'Gastos',novo:'Novo gasto',
+    cards:[['Gasto fixo mensal (Conta)',money(ativos.filter(g=>g.carteira!=='va').reduce((t,g)=>t+g.valor,0))],
+      ['Fixos no VA',money(ativos.filter(g=>g.carteira==='va').reduce((t,g)=>t+g.valor,0)),'var(--va)','Descontam do saldo do VA'],
+      ['Gasto no período (Conta)',money(rs.reduce((t,x)=>t+x.gConta,0)),'var(--neg)']],
+    fixos:{sub:'saem sozinhos todo mês',itens:fx,row:fixoRow,vazio:'Cadastre gastos que se repetem todo mês, como aluguel e assinaturas.'},
+    avulsos:{titulo:'Avulsos',itens:rs.flatMap(x=>x.G).filter(g=>!g.recorrente),row:gItem,sinal:-1,cor:'var(--neg)',um:'gasto',varios:'gastos',busca:'Buscar descrição, categoria ou valor',vazio:'Nenhum gasto avulso neste período.'}});
+}
+function rendas(){
+  const mp=mesesDoPeriodo(),per=new Set(mp),rs=mp.map(resumo);
+  const rec=S.rendas.filter(r=>r.recorrente),ativos=rec.filter(r=>!r.fim);
+  return telaFluxo({tipo:'renda',titulo:'Rendas',novo:'Nova renda',
+    cards:[['Renda fixa mensal (Conta)',money(ativos.filter(r=>r.carteira!=='va').reduce((t,r)=>t+r.valor,0))],
+      ['Benefícios mensais',money(ativos.filter(r=>r.carteira==='va').reduce((t,r)=>t+r.valor,0)),'var(--va)','Só pagam alimentação — saldo separado'],
+      ['Recebido no período (Conta)',money(rs.reduce((t,x)=>t+x.entConta,0)),'var(--pos)']],
+    fixos:{sub:'entram sozinhas todo mês',itens:rec,row:rendaRow,vazio:'Cadastre seu salário e VA.'},
+    avulsos:{titulo:'Extras',itens:S.rendas.filter(r=>!r.recorrente&&per.has(ym(r.data))),row:rendaRow,sinal:1,cor:'var(--pos)',um:'renda',varios:'rendas',busca:'Buscar descrição ou valor',vazio:'Nenhuma renda extra neste período.'}});
 }
 
 function categorias(){
-  const r=resumo(mes);const porCat={};r.G.forEach(g=>porCat[g.categoria]=(porCat[g.categoria]||0)+g.valor);
-  return `<div class="top"><h1>Categorias</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}<button class="btn pri" data-new="categoria">${I.plus}Nova</button></div></div>
-  <div class="card">${S.categorias.map(c=>{const v=porCat[c.id]||0;const p=c.orcamento?v/c.orcamento*100:0;const cor=p>=100?'var(--neg)':p>=80?'var(--warn)':c.cor;
+  const mp=mesesDoPeriodo(),nm=Math.max(mp.length,1),porCat={};
+  mp.forEach(m=>resumo(m).G.forEach(g=>porCat[g.categoria]=(porCat[g.categoria]||0)+g.valor));
+  return `<div class="top"><h1>Categorias</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}<button class="btn pri" data-new="categoria">${I.plus}Nova</button></div></div>
+  <div class="card">${S.categorias.map(c=>{const v=porCat[c.id]||0;const orc=c.orcamento*nm,p=c.orcamento?v/orc*100:0;const cor=p>=100?'var(--neg)':p>=80?'var(--warn)':c.cor;
    return `<div class="item" style="flex-wrap:wrap"><div class="dot" style="background:${c.cor}22;color:${c.cor}">${c.icone}</div>
-    <div class="meta"><b>${esc(c.nome)}</b><span class="small num">${fmt(v)} gastos${c.orcamento?` de ${fmt(c.orcamento)} · ${p.toFixed(0)}%`:' · sem orçamento'}</span>
+    <div class="meta"><b>${esc(c.nome)}</b><span class="small num">${fmt(v)} gastos${c.orcamento?` de ${fmt(orc)}${nm>1?` (${nm} meses)`:''} · ${p.toFixed(0)}%`:' · sem orçamento'}</span>
     ${c.orcamento?`<div class="bar" style="max-width:360px"><i style="width:${Math.min(p,100)}%;background:${cor}"></i></div>`:''}</div>
     <div class="acts" style="opacity:1"><button class="icon-btn" data-edit-c="${c.id}" aria-label="Editar">${I.edit}</button><button class="icon-btn" data-del-c="${c.id}" aria-label="Excluir">${I.trash}</button></div></div>`}).join('')}</div>`;
 }

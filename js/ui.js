@@ -15,8 +15,7 @@ function openMais(){
 function gastoForm(g){
   const novo=!g;g=g||{valor:0,categoria:S.categorias[0]?.id,data:mes===ym(today())?today():mes+'-01',carteira:'conta',descricao:'',recorrente:false,parcelas:1};
   window._gf={...g};
-  openModal(mh(novo?'Novo lançamento':'Editar gasto')+`
-   ${novo?`<div class="seg" style="margin-bottom:20px"><button class="on">Gasto</button><button data-new="renda">Renda</button></div>`:''}
+  openModal(mh(novo?'Novo gasto':'Editar gasto')+`
    <div style="text-align:center;margin-bottom:20px"><div class="cap">Valor${g.parcelas>1?' total':''}</div><div style="display:flex;align-items:baseline;justify-content:center;gap:6px"><span style="color:var(--t2);font-size:20px">R$</span><input class="amount-inp" id="gVal" inputmode="numeric" placeholder="0,00" value="${maskVal(g.valor)}" autofocus style="width:auto;max-width:260px"></div></div>
    <div class="field"><label>Pago com</label><div class="seg" id="gOrig"><button data-o="conta" class="${g.carteira!=='va'?'on':''}">Conta</button><button data-o="va" class="va ${g.carteira==='va'?'on':''}">VA</button></div></div>
    <div class="field"><label>Categoria</label><div class="chips" id="gCats">${S.categorias.map(c=>`<button class="chip ${g.categoria===c.id?'on':''}" data-c="${c.id}"><span style="color:${c.cor}">${c.icone}</span>${esc(c.nome)}</button>`).join('')}</div></div>
@@ -47,7 +46,6 @@ function rendaForm(r){
   const novo=!r;r=r||{descricao:'Salário',valor:0,tipo:'salario',carteira:'conta',recorrente:true,dia:5,data:today(),inicio:mes};
   window._rf={...r};
   openModal(mh(novo?'Nova renda':'Editar renda')+`
-   ${novo?`<div class="seg" style="margin-bottom:20px"><button data-new="gasto">Gasto</button><button class="on">Renda</button></div>`:''}
    <div style="text-align:center;margin-bottom:20px"><div class="cap">Valor líquido</div><div style="display:flex;align-items:baseline;justify-content:center;gap:6px"><span style="color:var(--t2);font-size:20px">R$</span><input class="amount-inp" id="rVal" inputmode="numeric" placeholder="0,00" value="${maskVal(r.valor)}" autofocus style="width:auto;max-width:260px;color:var(--pos)"></div></div>
    <div class="field"><label>Tipo</label><div class="seg" id="rTipo"><button data-t="salario" class="${r.tipo==='salario'?'on':''}">Salário</button><button data-t="beneficio" class="va ${r.tipo==='beneficio'?'on':''}">VA / VR</button><button data-t="extra" class="${r.tipo==='extra'?'on':''}">Extra</button></div></div>
    <div class="field"><label>Descrição</label><input class="inp" id="rDesc" value="${esc(r.descricao)}"></div>
