@@ -39,7 +39,7 @@ function investimentos(){
      <div class="num" style="font-size:28px;font-weight:600;line-height:36px">${money(x.liquido)}</div>
      <div class="small num" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px"><span>Aplicado ${fmt(x.aplicado)}</span><span style="color:${x.rend>=0?'var(--pos)':'var(--neg)'}">Rendeu ${fmt(x.rend,true)}</span>${x.mensal!=null?`<span>≈ ${fmt(x.mensal)}/mês</span>`:''}</div>
      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap"><button class="btn pri" style="flex:1" data-aporte="${a.id}" data-sinal="1">${I.plus}Aportar</button><button class="btn sec" data-aporte="${a.id}" data-sinal="-1">Resgatar</button>${a.indexador==='manual'?`<button class="btn sec" data-saldo-a="${a.id}">Atualizar saldo</button>`:''}</div></div>`};
-  return `<div class="top"><h1>Investimentos</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}<button class="btn pri" data-new="ativo">${I.plus}Novo investimento</button></div></div>
+  return `<div class="top"><h1>Investimentos</h1><div class="ctl"><div class="cg">${monthPicker()}<button class="btn pri" data-new="ativo">${I.plus}Novo investimento</button></div></div></div>
   <div class="grid">
    <div class="card stat c4"><div class="cap">Patrimônio investido</div><div class="val">${money(tot)}</div><span class="small">líquido de IR estimado</span></div>
    <div class="card stat c4"><div class="cap">Rendimento acumulado</div><div class="val" style="color:${rend>=0?'var(--pos)':'var(--neg)'}">${money(rend,true)}</div><span class="small num">sobre ${brl(apl)} aplicados</span></div>

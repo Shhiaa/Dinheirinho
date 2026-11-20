@@ -149,6 +149,23 @@ svg[data-linechart]{cursor:crosshair}
 .dropov.show{display:flex}
 .dropov>div{border:2px dashed var(--accent);border-radius:20px;padding:48px 64px;text-align:center;font-size:20px;font-weight:600;color:var(--accent);max-width:calc(100vw - 32px)}
 .dropov small{display:block;margin-top:8px;font-size:13px;font-weight:400;color:var(--t2)}
+/* cabeçalho das telas: os controles se ajustam à largura do próprio cabeçalho (não da janela) */
+.top{container-type:inline-size}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.cg{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg.modo{width:230px}
+@container (max-width:720px){
+ .ctl,.rng{width:100%}
+ .ctl{justify-content:stretch}
+ .ctl>.cg{flex:1 1 auto}
+ .cg>.month{flex:1 1 200px}
+ .cg>.month .pick{flex:1;min-width:0}
+ .cg>.seg.modo{flex:1 1 230px;width:auto}
+ .cg>.btn{flex:1 1 140px;min-width:0}
+ .rf{flex:1 1 200px}
+ .rf .month{flex:1}
+ .rf .month .pick{flex:1;min-width:0}
+}
 .legend div[data-fcat]{cursor:pointer;border-radius:6px;margin:0 -6px;padding:2px 6px;transition:background .12s}
 .legend div[data-fcat]:hover{background:var(--elev)}
 g.bg:has([data-vermes]){cursor:pointer}

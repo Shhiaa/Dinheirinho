@@ -29,7 +29,7 @@ function delta(cur,prev,invert){
 
 let dashModo='mes',dashCat=null;
 const catFiltro=()=>dashCat&&S.categorias.some(c=>c.id===dashCat)?dashCat:null;
-const modoToggle=()=>`<div class="seg" style="width:230px"><button class="${dashModo==='mes'?'on':''}" data-modo="mes">Mês</button><button class="${dashModo==='ano'?'on':''}" data-modo="ano">Ano</button><button class="${dashModo==='sempre'?'on':''}" data-modo="sempre">Sempre</button></div>`;
+const modoToggle=()=>`<div class="seg modo"><button class="${dashModo==='mes'?'on':''}" data-modo="mes">Mês</button><button class="${dashModo==='ano'?'on':''}" data-modo="ano">Ano</button><button class="${dashModo==='sempre'?'on':''}" data-modo="sempre">Sempre</button></div>`;
 const anoPicker=()=>`<div class="month ano"><button class="icon-btn" data-ano="-1" aria-label="Ano anterior">${I.l}</button><button class="pick" data-pick="ano" aria-label="Escolher ano">${mes.slice(0,4)}</button><button class="icon-btn" data-ano="1" aria-label="Próximo ano">${I.r}</button></div>`;
 const barraSvg=(x,y,w,h,cor,hx,hw,H,tip,op)=>`<g class="bg"${op!=null?` opacity="${op}"`:''}><rect class="b" x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${cor}"/><rect class="hit" x="${hx}" y="0" width="${hw}" height="${H}" fill="transparent" ${tip}/></g>`;
 function primeiroMes(){
@@ -51,7 +51,7 @@ function dashAno(){
   const gasTotal=sum('gastos'),gas=passados.reduce((t,x)=>t+gx(x),0);
   const ent=sum('ent'),saldo=sum('saldo'),va=sum('saldoVA'),entC=sum('entConta'),guard=sum('guardado')+sum('investido');
   const nM=passados.filter(x=>x.ent||x.gastos).length||1;
-  const head=`<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${sempre?'':anoPicker()}${modoToggle()}</div></div>`;
+  const head=`<div class="top"><h1>Visão geral</h1><div class="ctl"><div class="cg">${sempre?'':anoPicker()}${modoToggle()}</div></div></div>`;
   if(!passados.some(x=>x.ent||x.gastos))return head+`<div class="card empty"><h2>Sem lançamentos ${sempre?'ainda':'em '+y}</h2></div>`;
   // barras por mês
   const maxV=Math.max(1,...rs.map(x=>Math.max(x.ent,gx(x))));const W=720,H=180,bw=W/nm*0.3;
@@ -101,7 +101,7 @@ function dashboard(){
    <div class="card stat c3"><div class="cap">Saldo disponível</div><div class="val" style="color:${r.saldo<0?'var(--neg)':'var(--t1)'}">${money(r.saldo)}</div><span class="small">Conta: entradas − gastos${r.guardado?' − guardado':''}${r.investido?' − investido':''}</span></div>
    <div class="card stat c3" style="border-color:rgba(139,124,246,.3)"><div class="cap" style="color:var(--va)">Saldo do VA</div><div class="val">${money(r.saldoVA)}</div><span class="small">gastou ${brl(r.gVA)} de ${brl(r.entVA)}</span></div>`;
 
-  if(semDados)return `<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}${modoToggle()}</div></div>
+  if(semDados)return `<div class="top"><h1>Visão geral</h1><div class="ctl"><div class="cg">${monthPicker()}${modoToggle()}</div></div></div>
    <div class="grid">${cards}<div class="card c12 empty"><h2>Comece cadastrando sua renda</h2><p class="hint">Salário e VA entram sozinhos todo mês. Depois é só lançar os gastos pelo botão “+”.</p>
    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn pri" data-new="renda">Cadastrar salário/VA</button><button class="btn sec" data-demo>Ver com dados de exemplo</button></div></div></div>`;
 
@@ -138,7 +138,7 @@ function dashboard(){
   const orc=S.categorias.filter(c=>c.orcamento>0&&(!fc||c.id===fc)).map(c=>({c,v:porCatAll[c.id]||0})).sort((a,b)=>b.v/b.c.orcamento-a.v/a.c.orcamento).slice(0,5);
   const bars=orc.length?orc.map(budgetRow).join(''):`<div class="empty" style="padding:16px">Defina orçamentos em <button class="link" data-go="categorias">Categorias</button>.</div>`;
 
-  return `<div class="top"><h1>Visão geral</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker()}${modoToggle()}</div></div>
+  return `<div class="top"><h1>Visão geral</h1><div class="ctl"><div class="cg">${monthPicker()}${modoToggle()}</div></div></div>
   <div class="grid">
    ${cards}
    ${porDia!==null?`<div class="card c12"><div class="daily"><span class="cap">Você pode gastar</span><span class="num" style="font-size:28px;font-weight:600;color:${porDia<0?'var(--neg)':'var(--accent)'}"><span class="cur">R$</span>${fmt(porDia)}</span><span class="small">por dia nos próximos ${diasRest} dias${sal?' até o próximo salário':''}</span></div></div>`:''}
@@ -189,7 +189,7 @@ function telaFluxo(c){
   const q=filt.q.toLowerCase();
   const itens=a.itens.filter(x=>(!filt.orig||(x.carteira==='va'?'va':'conta')===filt.orig)&&(c.tipo!=='gasto'||!filt.cat||x.categoria===filt.cat)&&(!q||(x.descricao||'').toLowerCase().includes(q)||(c.tipo==='gasto'&&cat(x.categoria).nome.toLowerCase().includes(q))||fmt(x.valor).includes(q))).sort((x,y)=>y.data.localeCompare(x.data));
   const total=itens.reduce((t,x)=>t+x.valor,0)*a.sinal;
-  return `<div class="top"><h1>${c.titulo}</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}${c.extra||''}<button class="btn pri" data-new="${c.tipo}">${I.plus}${c.novo}</button></div></div>
+  return `<div class="top"><h1>${c.titulo}</h1><div class="ctl"><div class="cg">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}</div><div class="cg">${c.extra||''}<button class="btn pri" data-new="${c.tipo}">${I.plus}${c.novo}</button></div></div></div>
   <div class="grid">
    ${c.cards.map(([cap,val,cor,sub])=>`<div class="card stat c4"><div class="cap"${cor&&cor.startsWith('var(--va')?` style="color:${cor}"`:''}>${cap}</div><div class="val"${cor&&!cor.startsWith('var(--va')?` style="color:${cor}"`:''}>${val}</div>${sub?`<span class="small">${sub}</span>`:''}</div>`).join('')}
    <div class="card c12"><div class="card-h"><h2>Recorrentes</h2><span class="small">${c.fixos.sub}</span></div>${c.fixos.itens.length?c.fixos.itens.map(c.fixos.row).join(''):`<div class="empty">${c.fixos.vazio}<br><button class="btn pri" data-new="${c.tipo}">Cadastrar</button></div>`}</div>
@@ -242,7 +242,7 @@ function rendas(){
 function categorias(){
   const mp=mesesDoPeriodo(),nm=Math.max(mp.length,1),porCat={};
   mp.forEach(m=>resumo(m).G.forEach(g=>porCat[g.categoria]=(porCat[g.categoria]||0)+g.valor));
-  return `<div class="top"><h1>Categorias</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}<button class="btn pri" data-new="categoria">${I.plus}Nova</button></div></div>
+  return `<div class="top"><h1>Categorias</h1><div class="ctl"><div class="cg">${dashModo==='ano'?anoPicker():dashModo==='sempre'?'':monthPicker()}${modoToggle()}</div><div class="cg"><button class="btn pri" data-new="categoria">${I.plus}Nova</button></div></div></div>
   <div class="card">${S.categorias.map(c=>{const v=porCat[c.id]||0;const orc=c.orcamento*nm,p=c.orcamento?v/orc*100:0;const cor=p>=100?'var(--neg)':p>=80?'var(--warn)':c.cor;
    return `<div class="item" style="flex-wrap:wrap"><div class="dot" style="background:${c.cor}22;color:${c.cor}">${c.icone}</div>
     <div class="meta"><b>${esc(c.nome)}</b><span class="small num">${fmt(v)} gastos${c.orcamento?` de ${fmt(orc)}${nm>1?` (${nm} meses)`:''} · ${p.toFixed(0)}%`:' · sem orçamento'}</span>
