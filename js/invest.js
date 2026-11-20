@@ -126,6 +126,7 @@ function config(){
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn sec" data-import>Restaurar backup</button><label class="btn ghost" style="cursor:pointer">Abrir arquivo…<input type="file" id="impFile" accept=".json,.txt" hidden></label></div></div>
    <div class="card c12"><h2 style="margin-bottom:8px">Importar planilha (Notion, Excel, PicPay, CSV)</h2><p class="small" style="margin-bottom:16px">Extrato do PicPay (.csv) é reconhecido sozinho: compras, Pix e pagamentos viram gastos, Pix/transferências recebidos viram rendas extras e movimentos do cofrinho são ignorados. Para outras planilhas, use um .csv com colunas como Descrição, Custo/Valor, Data e Categoria. Categorias novas são criadas e lançamentos repetidos são ignorados. Todos entram como pagos com a Conta.</p>
     <label class="btn pri" style="cursor:pointer">Escolher arquivo CSV…<input type="file" id="csvFile" accept=".csv,text/csv" hidden></label></div>
+   ${regrasCard()}
    <div class="card c12"><h2 style="margin-bottom:8px">Zona de perigo</h2><p class="small" style="margin-bottom:16px">Apaga todos os lançamentos, rendas e categorias personalizadas.</p><button class="btn danger" data-reset>Apagar tudo</button></div>
   </div>`;
 }

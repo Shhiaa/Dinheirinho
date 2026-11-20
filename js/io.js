@@ -67,7 +67,8 @@ function importarCSV(txt){
     let cn=(cC>=0?r[cC]:'').split(',')[0].replace(/\s*\(https?:[^)]*\)/g,'').trim()||'Outros';
     let c=S.categorias.find(x=>x.nome.toLowerCase()===cn.toLowerCase());
     if(!c){const k=cn.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');c={id:uid(),nome:cn,icone:ICON[k]||'•',cor:PAL[S.categorias.length%PAL.length],orcamento:0};S.categorias.push(c);novasCats++}
-    let desc=(cD>=0?r[cD]:'').trim();const obs=cO>=0?r[cO].trim():'';if(obs)desc=desc?`${desc} — ${obs}`:obs;
+    const rgx=regraPara(cD>=0?r[cD]:'');if(rgx&&normTxt(c.nome)==='outros'){const rc=S.categorias.find(k=>k.id===rgx.categoria);if(rc)c=rc}
+    let desc=(rgx&&rgx.nome)||(cD>=0?r[cD]:'').trim();const obs=cO>=0?r[cO].trim():'';if(obs)desc=desc?`${desc} — ${obs}`:obs;
     const rec=cR>=0&&/fix/i.test(r[cR]);const orig=cOr>=0&&/va|vale|alimenta/i.test(r[cOr])?'va':'conta';
     const g={id:uid(),valor,categoria:c.id,carteira:orig,data,descricao:desc,recorrente:rec,parcelas:1};
     if(existentes.has(chave(g))){dup++;continue}
@@ -146,8 +147,8 @@ function importarPicpay(rows,H){
     if(!best)continue;
     const its=best.map(m=>porMes[m][0]),dias=its.map(x=>+x.data.slice(8));
     if(Math.max(...dias)-Math.min(...dias)>10)continue;
-    const m0=its[0],mk=PP_CATS.find(([re])=>re.test(m0.k)),c=mk?getCat(mk[1],mk[2]):getCat('Outros','•');
-    const g={id:uid(),valor:m0.valor,categoria:c.id,carteira:'conta',data:m0.data,descricao:m0.desc||m0.r[cT],recorrente:true,parcelas:1,origem:'picpay',k:m0.k,refs:its.map(x=>x.ref)};
+    const m0=its[0],rg0=regraPara(m0.desc),mk=PP_CATS.find(([re])=>re.test(m0.k)),c=(rg0&&S.categorias.find(k=>k.id===rg0.categoria))||(mk?getCat(mk[1],mk[2]):getCat('Outros','•'));
+    const g={id:uid(),valor:m0.valor,categoria:c.id,carteira:'conta',data:m0.data,descricao:(rg0&&rg0.nome)||m0.desc||m0.r[cT],recorrente:true,parcelas:1,origem:'picpay',k:m0.k,refs:its.map(x=>x.ref)};
     if(best[best.length-1]<ultimoMes)g.fim=best[best.length-1];
     S.gastos.push(g);fixos++;its.forEach(x=>{x.fixo=true;refs.add(x.ref)});
   }
@@ -158,9 +159,9 @@ function importarPicpay(rows,H){
     if(refs.has(x.ref)){dup++;continue}
     refs.add(x.ref);
     if(PP_SAIDA.includes(x.tipo)){
-      const m=PP_CATS.find(([re])=>re.test(x.k));
-      const c=m?getCat(m[1],m[2]):getCat('Outros','•');
-      S.gastos.push({id:uid(),valor:x.valor,categoria:c.id,carteira:'conta',data:x.data,descricao:x.desc||x.r[cT],recorrente:false,parcelas:1,ref:x.ref});gs++;
+      const rg=regraPara(x.desc),m=PP_CATS.find(([re])=>re.test(x.k));
+      const c=(rg&&S.categorias.find(k=>k.id===rg.categoria))||(m?getCat(m[1],m[2]):getCat('Outros','•'));
+      S.gastos.push({id:uid(),valor:x.valor,categoria:c.id,carteira:'conta',data:x.data,descricao:(rg&&rg.nome)||x.desc||x.r[cT],recorrente:false,parcelas:1,ref:x.ref});gs++;
     }else{
       const estorno=x.tipo==='compra estornada'||x.tipo==='pix devolvido';
       S.rendas.push({id:uid(),descricao:(estorno?'Estorno: ':'')+(x.desc||x.r[cT]),valor:x.valor,tipo:'extra',carteira:'conta',recorrente:false,data:x.data,ref:x.ref});rs++;

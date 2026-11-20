@@ -7,6 +7,11 @@ document.addEventListener('click',e=>{
   else if(d.categorizar!==undefined){catPular=new Set();categorizar()}
   else if(d.ctsalvar!==undefined)ctSalvar();
   else if(d.ctpular!==undefined)ctPular();
+  else if(d.newRegra!==undefined)regraForm();
+  else if(d.editRegra)regraForm(S.regras.find(x=>x.id===d.editRegra));
+  else if(d.delRegra)delRegra(d.delRegra);
+  else if(d.saveregra!==undefined)saveRegra(d.saveregra);
+  else if(d.aplicarRegras!==undefined)aplicarRegras();
   else if(d.new==='renda')rendaForm();
   else if(d.new==='categoria')catForm();
   else if(d.new==='meta')metaForm();
